@@ -223,7 +223,8 @@ rule_id               which policy rule fired
 calculation           JSON — e.g. requested 1500.00 − dispensed 950.00 = 550.00
 self_check            pass / flag + offending IDs/amounts
 redraft_count
-hold_reason           NULL / ambiguous_match / no_match / self_check_failed / unknown_auth_method / llm_error
+hold_reason           NULL / customer_not_found / ambiguous_match / no_match / category_revised /
+                      self_check_failed / unknown_auth_method / llm_error
 
 -- Observability
 provider, extract_model, draft_model, prompt_version, schema_version, policy_version
@@ -323,18 +324,20 @@ approval_limit_myr    e.g. 5000.00 (NULL for manager = no limit)
     "category": "DUPLICATE_CHARGE",
     "language": "MS",
     "is_mixed_language": false,
-    "is_staff_note": false,
     "amount_mentioned": 46.66,
+    "other_amounts": [],
     "amount_approximate": false,
-    "merchant_name": "GoRide",
-    "date_phrase": "hari Selasa lepas",
-    "card_last4": null,
-    "recipient_name": null,
+    "counterparty_name": "GoRide",
     "counterparty_bank": null,
+    "atm_location": null,
+    "date_phrase": "hari Selasa lepas",
+    "date_exact": null,
+    "card_last4": null,
     "fee_type": null,
     "fee_month": null
   }
   ```
+- Exact schema: `Clues` in `backend/contracts.py` (unknown fields rejected). Dates accepted as DD-MM-YYYY or YYYY-MM-DD; all times MYT; costs in RM
 - Validate against a schema; malformed output → one retry → `hold_reason = llm_error`, visible as failed case
 - Complaint text is data, not instructions: wrap it in a delimited block; the output schema has no fields that can set outcome/refund/route
 - Few-shot examples from training data (EN + MS + mixed + call-centre note)
@@ -458,7 +461,7 @@ Checkpoint 2 (Day 2 12:00) needs decision, reply, approval and write-back on 50 
 **2.3 Intake + Write-back**
 - `POST /api/intake` — accepts one complaint row (same fields as live round) or a CSV; persists the case first, then runs the pipeline in the background; returns case ID for polling
 - Watched folder `inbox/` — dropped CSV files go through the same intake path
-- Validate customer exists; same complaint ID + identical content returns the existing case; same ID + different content is rejected
+- Unknown `customer_id` is accepted and stored, never dropped: no transaction lookup, held with `customer_not_found` (HUMAN_APPROVAL, or FRAUD_TEAM if INVESTIGATE); same complaint ID + identical content returns the existing case; same ID + different content is rejected
 - AUTO_RESOLVE cases: self-check pass → outbound record (`authorised_by = auto`) → `sent` → `closed`
 - Every human-gated send goes through one backend function that checks: right role, approved (and second-tier approved if escalated), current reply passed self-check, not already sent. Protects against double clicks and retries
 - Pipeline or delivery failure leaves a visible `failed` state with retry

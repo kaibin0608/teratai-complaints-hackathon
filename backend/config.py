@@ -22,3 +22,4 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "fake")
 LLM_EXTRACT_MODEL = os.getenv("LLM_EXTRACT_MODEL", "")
 LLM_DRAFT_MODEL = os.getenv("LLM_DRAFT_MODEL", "")
 LLM_MAX_CONCURRENCY = int(os.getenv("LLM_MAX_CONCURRENCY", "8"))
+USD_TO_MYR = float(os.getenv("USD_TO_MYR", "4.20"))  # provider prices are in USD; costs are reported in RM

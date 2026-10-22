@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 
+from backend.agent.router import hold, sla_due
 from backend.agent.tools import get_db
 from backend.contracts import (
     CheckResult,
@@ -43,57 +44,65 @@ BASE_PRIORITY = {"SCAM_TRANSFER": "P1", "UNAUTHORISED_CARD": "P1", "DUPLICATE_CH
 BUMP = {"P3": "P2", "P2": "P1", "P1": "P1"}
 
 
-def fake_extract(complaint: Complaint) -> tuple[Clues, LLMUsage]:
+async def fake_extract(complaint: Complaint) -> tuple[Clues, LLMUsage]:
     text = f"{complaint.subject} {complaint.text}".lower()
     category = next((cat for cat, words in KEYWORDS if any(w in text for w in words)), "SERVICE_QUALITY")
     words = set(re.findall(r"[a-z']+", complaint.text.lower()))
     malay, english = len(words & MALAY), len(words & ENGLISH)
-    amount = AMOUNT_RE.search(complaint.text)
+    amounts = [to_money(a) for a in AMOUNT_RE.findall(complaint.text)]
     return Clues(
         category=category,
         language="MS" if malay >= 2 else "EN",
         is_mixed_language=malay >= 2 and english >= 2,
-        is_staff_note=complaint.is_staff_note,
-        amount_mentioned=to_money(amount.group(1)) if amount else None,
+        amount_mentioned=amounts[0] if amounts else None,
+        other_amounts=amounts[1:],
         amount_approximate=any(w in text for w in APPROX),
     ), LLMUsage(provider="fake", model="keywords")
 
 
 def stub_engine(complaint: Complaint, clues: Clues) -> EngineResult:
-    """No matching: SERVICE_QUALITY → INFO_ONLY, fraud categories → INVESTIGATE, everything else → DECLINE + hold."""
+    """No matching: SERVICE_QUALITY → INFO_ONLY, fraud categories → INVESTIGATE, everything else → DECLINE + hold.
+    Unknown customer → same outcome, held with customer_not_found."""
     db = get_db()
-    customer = db.customers[complaint.customer_id]
-    vulnerable = age_on(customer["date_of_birth"], complaint.received_at.date()) >= 65
+    customer = db.customers.get(complaint.customer_id)
+    vulnerable = customer is not None and age_on(customer["date_of_birth"], complaint.received_at.date()) >= 65
     priority = BASE_PRIORITY[clues.category]
     if vulnerable:
         priority = BUMP[priority]
-    use_preferred = clues.is_mixed_language or clues.is_staff_note
+    use_preferred = customer is not None and (clues.is_mixed_language or complaint.is_staff_note)
     language = customer["preferred_language"] if use_preferred else clues.language
+    ack_due, resolve_due = sla_due(complaint.received_at, priority)
 
     if clues.category == "SERVICE_QUALITY":
-        outcome, route, hold, status = "INFO_ONLY", "AUTO_RESOLVE", None, "not_applicable"
+        outcome, route, hold_reason, status = "INFO_ONLY", "AUTO_RESOLVE", None, "not_applicable"
     elif clues.category in ("SCAM_TRANSFER", "UNAUTHORISED_CARD"):
-        outcome, route, hold, status = "INVESTIGATE", "FRAUD_TEAM", "no_match", "none"
+        outcome, route, hold_reason, status = "INVESTIGATE", "FRAUD_TEAM", "no_match", "none"
     else:
-        outcome, route, hold, status = "DECLINE", "HUMAN_APPROVAL", "no_match", "none"
+        outcome, route, hold_reason, status = "DECLINE", "HUMAN_APPROVAL", "no_match", "none"
+
+    decision = Decision(
+        category=clues.category,
+        outcome=outcome,
+        priority=priority,
+        reply_language=language,
+        route=route,
+        rule_id="STUB",
+        hold_reason=hold_reason,
+        vulnerable=vulnerable,
+        ack_due_at=ack_due,
+        resolve_due_at=resolve_due,
+    )
+    if customer is None:
+        decision = hold(decision.model_copy(update={"hold_reason": None}), "customer_not_found")
 
     return EngineResult(
         match=MatchResult(status=status, category=clues.category),
-        decision=Decision(
-            category=clues.category,
-            outcome=outcome,
-            priority=priority,
-            reply_language=language,
-            route=route,
-            rule_id="STUB",
-            hold_reason=hold,
-            vulnerable=vulnerable,
-        ),
-        evidence=Evidence(customer=customer, accounts=db.accounts_by_customer[complaint.customer_id]),
+        decision=decision,
+        evidence=Evidence(customer=customer, accounts=db.accounts_by_customer.get(complaint.customer_id, [])),
     )
 
 
-def stub_draft(result: EngineResult, feedback: list[str] | None = None) -> tuple[str, LLMUsage]:
+async def stub_draft(result: EngineResult, feedback: list[str] | None = None) -> tuple[str, LLMUsage]:
     if result.decision.reply_language == "MS":
         text = "Terima kasih kerana menghubungi Teratai Bank. Kami sedang menyemak aduan anda dan akan menghubungi anda semula."
     else:

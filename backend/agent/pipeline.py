@@ -1,6 +1,7 @@
 """Orchestrates one complaint: extract → match_and_decide → draft → self-check → hold. Owner: Dev B.
 
 Every step is injected, so stubs and real implementations swap without touching this file.
+Extract and draft are async (LLM calls); engine and check are plain functions.
 """
 from __future__ import annotations
 
@@ -13,7 +14,7 @@ from backend.contracts import AgentRun, Checker, Complaint, Drafter, Engine, Ext
 MAX_REDRAFTS = 1
 
 
-def run_pipeline(
+async def run_pipeline(
     complaint: Complaint,
     *,
     extract: Extractor = fake_extract,
@@ -24,20 +25,24 @@ def run_pipeline(
 ) -> AgentRun:
     run = AgentRun(run_id=uuid.uuid4().hex, complaint_id=complaint.complaint_id, run_kind=run_kind)
     try:
-        run.clues, run.extract_usage = extract(complaint)
+        run.clues, run.extract_usage = await extract(complaint)
     except Exception as exc:  # provider failure or malformed output: visible failed run, never a guess
         run.error = f"extract failed: {exc}"
         return run
 
-    result = engine(complaint, run.clues)
+    try:
+        result = engine(complaint, run.clues)
+    except Exception as exc:  # engine bug; business cases come back as holds, not exceptions
+        run.error = f"engine failed: {exc}"
+        return run
     run.match, run.decision, run.evidence = result.match, result.decision, result.evidence
 
-    reply, usage = draft(result)
+    reply, usage = await draft(result)
     run.draft_usage.append(usage)
     run.self_check = check(reply, result)
     while not run.self_check.passed and run.redraft_count < MAX_REDRAFTS:
         run.redraft_count += 1
-        reply, usage = draft(result, run.self_check.problems)
+        reply, usage = await draft(result, run.self_check.problems)
         run.draft_usage.append(usage)
         run.self_check = check(reply, result)
 
