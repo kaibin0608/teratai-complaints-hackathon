@@ -5,6 +5,16 @@
 
 Backend first, frontend second. Core before bonus, but the data model supports the bonus from day one.
 
+## Explainer
+
+**▶ [Watch the Teratai Complaints Explainer](https://claude.ai/artifact/Hk9ZvLQa1ctHfCnexmjjUQ)**: an interactive, narrated walkthrough of the brief and this plan (animated scenes, voice-over, live captions; pick any chapter or scene from the list on the page).
+
+| Chapter | Covers | Length |
+|---|---|---|
+| 1 · The Challenge | What the hackathon asks for: the 8 output fields, 7 categories, priority/language/routing rules, scoring, live round, bonus, deliverables and deadlines | 7:41 |
+| 2 · The Plan | What this plan builds and how: the 7-step pipeline, matching, policy, self-check, data model, roles, team split, milestones | 7:17 |
+| 3 · Coverage Check | Does this plan cover README.md? Coverage, 5 gaps to fix, open questions | 3:29 |
+
 ---
 
 ## Hackathon Scoring Reminder
