@@ -26,8 +26,8 @@ from backend.contracts import (
 from starter.data import age_on
 
 KEYWORDS = [  # checked in order, copied from starter/baseline.py
-    ("SCAM_TRANSFER", ["scam", "tipu", "police", "polis", "safe account", "akaun selamat", "parcel", "bungkusan", "invest", "part-time", "part time", "kerja sambilan", "emergency", "kecemasan"]),
-    ("ATM_NOT_DISPENSED", ["atm"]),
+    ("SCAM_TRANSFER", ["scam", "tipu", "police", "polis", "safe account", "akaun selamat", "parcel", "bungkusan", "invest", "melabur", "skim pelaburan", "part-time", "part time", "kerja sambilan", "emergency", "kecemasan", "deceive", "deceived", "recover the money", "admin hilang", "kumpulan chat"]),
+    ("ATM_NOT_DISPENSED", ["atm", "machine", "mesin", "dispense", "withdraw", "withdrew", "tidak keluar", "tak keluar", "wang tidak", "duit tak", "cash not", "did not give"]),
     ("DUPLICATE_CHARGE", ["twice", "two times", "dua kali", "2 kali", "double"]),
     ("UNAUTHORISED_CARD", ["did not make", "not authorise", "didn't make", "bukan saya", "tidak membuat", "tak buat", "disputes a card"]),
     ("FEE_DISPUTE", ["fee", "charge", "caj", "yuran"]),
