@@ -10,6 +10,27 @@ On 340 unseen holdout complaints it picks the right transaction 99.4% of the tim
 
 ## Results
 
+### Official score: all 1,750 training complaints (`scoring/score.py`)
+
+The full pipeline (DeepSeek extractor + engine + template replies), run with `backend.batch.runner --ids train --no-draft` and scored with `backend.batch.submit --ids train --score`.
+
+| | Score |
+|---|---|
+| **Final score** | **99.07 / 100** (keyword baseline in `starter/`: 31.9) |
+| Critical errors | 0 (0.0%) |
+| matched_txn_id / outcome / refund | 98.9% each |
+| category / priority | 100% / 100% |
+| reply_language | 98.6% |
+| route (not scored) | 92.0% |
+| Cost | RM1.95 for the run (RM0.00114 per complaint; pilot and holdout came from the cache) |
+| Latency | 4.2 s mean, 9.0 s p95 per complaint (8 in parallel) |
+
+Where the remaining points go:
+- **20 wrong transactions, all "last week" complaints.** The date resolver's 7-day window misses the transaction. That's ~0.86 points of the 0.93 lost.
+- **25 wrong reply languages:** mostly Malay scam and service complaints read as mixed. 5 points each.
+- **7 extractions failed twice** with invalid JSON, even in strict-schema mode, and fell back to keywords (`llm_error`). A rerun fixed all 7. After any large run, check the runner's `llm_error` warning.
+- **Route at 92%:** 180 duplicate-charge cases held as `ambiguous_match` for a human. Not scored, but judges check routing in the live round.
+
 ### Holdout: 340 complaints never used for tuning
 
 | | Keywords (free) | DeepSeek, prompt v2 |
