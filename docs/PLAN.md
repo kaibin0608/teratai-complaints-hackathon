@@ -72,10 +72,10 @@ Split by module so each developer owns separate files. **Dev A** owns the decisi
 
 1. Skeleton: `backend/` folders (see File Structure), `requirements.txt`, `.gitignore` (`.env`, `*.db`, caches), `pytest`
 2. `backend/contracts.py`: Pydantic models `Complaint`, `Clues`, `Candidate`, `MatchResult`, `Decision`, `CheckResult`, `AgentRun`, and the signatures both sides code against:
-   - `extract(complaint) -> Clues`
-   - `match_and_decide(complaint, clues) -> (MatchResult, Decision)`
-   - `check_reply(text, evidence, decision) -> CheckResult`
-   - `draft(decision, evidence, lang) -> str`
+   - `extract(complaint) -> (Clues, LLMUsage)` — Dev B
+   - `match_and_decide(complaint, clues) -> EngineResult(match, decision, evidence)` — Dev A
+   - `draft(result, feedback=None) -> (str, LLMUsage)` — Dev B; language is `decision.reply_language`
+   - `check(reply_text, result) -> CheckResult` — Dev A; also used on human edits
 3. Stubs so nobody waits: `fake_extract` (keyword logic from `starter/baseline.py`) for A; a fixed-decision `match_and_decide` for B
 
 After Step 0 merges, A and B work independently and integrate through PRs at the milestones below.
@@ -223,7 +223,8 @@ rule_id               which policy rule fired
 calculation           JSON — e.g. requested 1500.00 − dispensed 950.00 = 550.00
 self_check            pass / flag + offending IDs/amounts
 redraft_count
-hold_reason           NULL / ambiguous_match / no_match / self_check_failed / unknown_auth_method / llm_error
+hold_reason           NULL / customer_not_found / ambiguous_match / no_match / category_revised /
+                      self_check_failed / unknown_auth_method / llm_error
 
 -- Observability
 provider, extract_model, draft_model, prompt_version, schema_version, policy_version
@@ -315,7 +316,7 @@ approval_limit_myr    e.g. 5000.00 (NULL for manager = no limit)
 - Pick a fixed 50-complaint pilot from training labels covering all categories, EN/MS/mixed, every channel, call-centre notes. Hold back a separate slice of training labels for checking changes
 
 **1.2 LLM interface + Complaint Parser — LLM step (1.5 hrs)**
-- Pluggable provider: one `LLMClient` interface with `extract(complaint) -> Clues` and `draft(decision, evidence, language) -> str`. Provider and model set per step via env (`LLM_PROVIDER`, `LLM_EXTRACT_MODEL`, `LLM_DRAFT_MODEL`). Unknown provider fails at startup
+- Pluggable provider: one `LLMClient` interface implementing the `Extractor` and `Drafter` protocols in `backend/contracts.py`. Provider and model set per step via env (`LLM_PROVIDER`, `LLM_EXTRACT_MODEL`, `LLM_DRAFT_MODEL`). Unknown provider fails at startup
 - Build the first adapter now; add a second adapter and compare both on the 50-case pilot (same deterministic engine), then choose the default by accuracy, cost and latency
 - Extracts structured JSON from complaint text:
   ```json
@@ -323,18 +324,20 @@ approval_limit_myr    e.g. 5000.00 (NULL for manager = no limit)
     "category": "DUPLICATE_CHARGE",
     "language": "MS",
     "is_mixed_language": false,
-    "is_staff_note": false,
     "amount_mentioned": 46.66,
+    "other_amounts": [],
     "amount_approximate": false,
-    "merchant_name": "GoRide",
-    "date_phrase": "hari Selasa lepas",
-    "card_last4": null,
-    "recipient_name": null,
+    "counterparty_name": "GoRide",
     "counterparty_bank": null,
+    "atm_location": null,
+    "date_phrase": "hari Selasa lepas",
+    "date_exact": null,
+    "card_last4": null,
     "fee_type": null,
     "fee_month": null
   }
   ```
+- Exact schema: `Clues` in `backend/contracts.py` (unknown fields rejected). Dates accepted as DD-MM-YYYY or YYYY-MM-DD; all times MYT; costs in RM
 - Validate against a schema; malformed output → one retry → `hold_reason = llm_error`, visible as failed case
 - Complaint text is data, not instructions: wrap it in a delimited block; the output schema has no fields that can set outcome/refund/route
 - Few-shot examples from training data (EN + MS + mixed + call-centre note)
@@ -458,7 +461,7 @@ Checkpoint 2 (Day 2 12:00) needs decision, reply, approval and write-back on 50 
 **2.3 Intake + Write-back**
 - `POST /api/intake` — accepts one complaint row (same fields as live round) or a CSV; persists the case first, then runs the pipeline in the background; returns case ID for polling
 - Watched folder `inbox/` — dropped CSV files go through the same intake path
-- Validate customer exists; same complaint ID + identical content returns the existing case; same ID + different content is rejected
+- Unknown `customer_id` is accepted and stored, never dropped: no transaction lookup, held with `customer_not_found` (HUMAN_APPROVAL, or FRAUD_TEAM if INVESTIGATE); same complaint ID + identical content returns the existing case; same ID + different content is rejected
 - AUTO_RESOLVE cases: self-check pass → outbound record (`authorised_by = auto`) → `sent` → `closed`
 - Every human-gated send goes through one backend function that checks: right role, approved (and second-tier approved if escalated), current reply passed self-check, not already sent. Protects against double clicks and retries
 - Pipeline or delivery failure leaves a visible `failed` state with retry
