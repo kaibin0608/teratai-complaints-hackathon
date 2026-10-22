@@ -64,6 +64,56 @@ Refunds and customer messages are **simulated**: the backend enforces the approv
 
 ---
 
+## Team Split (core, 2 developers)
+
+Split by module so each developer owns separate files. **Dev A** owns the decision engine (code that does money and rules). **Dev B** owns the platform (LLM, DB, API, workflow).
+
+### Step 0 — together, first ~45 min, one PR
+
+1. Skeleton: `backend/` folders (see File Structure), `requirements.txt`, `.gitignore` (`.env`, `*.db`, caches), `pytest`
+2. `backend/contracts.py`: Pydantic models `Complaint`, `Clues`, `Candidate`, `MatchResult`, `Decision`, `CheckResult`, `AgentRun`, and the signatures both sides code against:
+   - `extract(complaint) -> Clues`
+   - `match_and_decide(complaint, clues) -> (MatchResult, Decision)`
+   - `check_reply(text, evidence, decision) -> CheckResult`
+   - `draft(decision, evidence, lang) -> str`
+3. Stubs so nobody waits: `fake_extract` (keyword logic from `starter/baseline.py`) for A; a fixed-decision `match_and_decide` for B
+
+After Step 0 merges, A and B work independently and integrate through PRs at the milestones below.
+
+### Ownership
+
+| | Dev A — decision engine | Dev B — platform and LLM |
+|---|---|---|
+| Owns | `agent/tools.py`, `date_resolver.py`, `transaction_matcher.py`, `categories/*`, `router.py` (route, priority, language, hold, SLA), `self_check.py`, `eval/` | `llm/*` (interface, adapters, prompts, cache, cost), `agent/parser.py`, `reply_generator.py`, `pipeline.py`, `db/`, `auth/`, `api/` (intake, watched folder, cases, approval/fraud actions, gated outbound), `batch/` (runner, export, validation) |
+| Order | 1. Tools + date resolver<br>2. ATM handler (sets the pattern)<br>3. Unauthorised card, scam<br>4. Failed transfer, duplicate<br>5. Fee<br>6. Service quality<br>7. Self-check + routing/hold | 1. LLM interface + first adapter + extraction prompt<br>2. Pipeline + DB persistence<br>3. Intake API + watched folder<br>4. Reply drafting + redraft loop<br>5. Case/approval/fraud endpoints + gated send<br>6. Batch runner + export<br>7. Second adapter + pilot comparison |
+| Tests | Each handler scored on `labels_train.csv` without LLM calls; boundary tests (RM500, 10 min, birthdays, fee anniversaries) | Gate tests (over-limit approve, send without approval, edit clears approval, repeat intake, double click); export validation |
+
+**Shared files** (`contracts.py`, `config.py`, `requirements.txt`) change only in a dedicated PR the other developer approves.
+
+A carries the most points (matching = 75 of 100). After Checkpoint 2, B helps A with error analysis on the weakest category.
+
+### Integration milestones
+
+| When | Goal | Merges |
+|---|---|---|
+| Day 1 ~12:00 | First real end-to-end path: real extraction → ATM handler → stored case | A: ATM handler. B: extractor + pipeline + DB |
+| **Day 1 16:00 — Checkpoint 1** | 20 training complaints classified + matched | A: all matchers. B: runner with `--no-draft` |
+| Day 1 evening | Full pipeline with draft + self-check; first 750 test run | Both |
+| **Day 2 12:00 — Checkpoint 2** | Approval + write-back via API on 50 training complaints; score posted | B: workflow API. A: self-check on edits |
+| After Checkpoint 2 | Minimal React UI (intake, queues), then bonus | Both, split by role screen |
+
+Until Checkpoint 2 the core can be demoed through FastAPI `/docs`; React starts afterwards.
+
+### GitHub workflow
+
+- Branches: `feat/a-<thing>` / `feat/b-<thing>`, a few hours of work each
+- Small PRs into `dev`; the other developer reviews within ~15 min; squash-merge; rebase on `dev` before opening
+- GitHub Action on every PR: `pytest` + training evaluation, score posted on the PR
+- `dev` → `main` only at checkpoints; `main` is what the upstream submission PR comes from
+- Never commit `.env` or the SQLite DB — the repo is public
+
+---
+
 ## High-Level Architecture
 
 ```
