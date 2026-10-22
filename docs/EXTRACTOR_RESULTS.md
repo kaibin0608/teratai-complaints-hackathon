@@ -133,6 +133,26 @@ Notes:
 
 To run it for the organisers: `uvicorn backend.main:app --host 0.0.0.0 --port 8000` (venue Wi-Fi), or put a tunnel such as ngrok or Cloudflare Tunnel in front. Keep it running from the 15:00 freeze until the demo ends.
 
+## Messy complaints (the hidden test's style)
+
+The hidden test sends 20 complaints "written the way real customers write: typos, SMS short forms, emoji, mixed English and Malay". `backend/eval/make_messy.py` rewrote 42 labelled training complaints (6 per category, none from the pilot, holdout or few-shot examples) with Haiku, in six styles (SMS short forms, rushed typos, Manglish, angry caps and emoji, voice-to-text, casual chat). Every fact is kept, so the original labels apply. The set is fixed in `backend/eval/messy/`. Examples: "sy withdraw rm300 hari selasa lps tp mesin tak keluar duit", "cust called re atm w/d approx rm500 kuching mall atm 8 aug 2026".
+
+`api_check.py --complaints backend/eval/messy/complaints_messy.csv --labels backend/eval/messy/labels_messy.csv --all --no-probes`, all 42 at once:
+
+| | First run | After the retry-budget fix |
+|---|---|---|
+| Score | 97.1 | **99.4** |
+| Transaction / outcome / refund / category / priority | 98% each | **100%** each |
+| Reply language | 88% | 88% (label caveat below) |
+| Critical errors | 0 | 0 |
+| case_state and sent match the route | 42 / 42 | 42 / 42 |
+| Time per complaint (fresh, 8 in parallel) | 33.7 s median, 66.5 s slowest | (cached rerun; not a timing test) |
+
+- **The one total miss (MSY-00033, "cash deposit machine … sudah rosak … leh") was an extraction failure.** DeepSeek's default `high` reasoning used the whole 600-token budget, giving empty or cut-off JSON (`finish=length`) in 2 of 3 raw tries. The keyword fallback then read it as an ATM complaint. This is the same cause as the 7 training and 4 test `llm_error` fallbacks. Messy text makes the model reason longer. **Fix:** a retry now gets 3× the token budget (`RETRY_TOKEN_FACTOR`); the first request is unchanged, so cache keys stay valid.
+- **The 5 reply-language "misses" are label artifacts, not agent errors.** The rewrites turned single-language originals into code-switched text ("sy dh transfer rm1466.78 … tlg bantu pls"). The agent marked them mixed and replied in the customer's preferred language, which is the training labels' own convention; the copied labels describe the clean originals.
+- **Speed:** 42 fresh complaints with 8 in flight queue up (median 33.7 s). The hidden test sends 20, so expect roughly half that, inside the 120 s limit. To go faster: a higher `LLM_MAX_CONCURRENCY` for the server, and/or lower extraction reasoning (needs re-validating accuracy).
+  **Decision (Dev B, 2026-10-22):** keep `LLM_MAX_CONCURRENCY = 8`. The speed is acceptable for 20 at once, and 20 simultaneous requests risk provider rate limits (HTTP 429). Revisit only if the hidden-test timing becomes a problem.
+
 ## How to reproduce
 
 Needs `OPENROUTER_API_KEY` in `.env`. LLM responses are cached in `backend/.cache/llm_cache.db`, so a rerun with the same prompt and model costs nothing.

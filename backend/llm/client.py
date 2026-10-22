@@ -23,6 +23,7 @@ log = logging.getLogger(__name__)
 
 T = TypeVar("T")
 MAX_ATTEMPTS = 2  # one retry
+RETRY_TOKEN_FACTOR = 3  # reasoning models can spend the whole budget thinking and return empty or cut-off output
 FENCE_RE = re.compile(r"^```(?:json)?\s*(.*?)\s*```$", re.DOTALL)
 
 
@@ -121,7 +122,8 @@ class LLMClient:
         first_request: LLMRequest | None = None
         for attempt in range(MAX_ATTEMPTS):
             usage.retries = attempt
-            request = LLMRequest(spec.model, messages, response_format, temperature, max_tokens, reasoning_effort)
+            budget = max_tokens if attempt == 0 else max_tokens * RETRY_TOKEN_FACTOR
+            request = LLMRequest(spec.model, messages, response_format, temperature, budget, reasoning_effort)
             first_request = first_request or request
             try:
                 raw, cached = await self._send(spec, request, usage)
@@ -154,10 +156,11 @@ class LLMClient:
     ) -> tuple[str, LLMUsage]:
         """Plain text completion (replies). One retry on a transient error or an empty answer."""
         usage = LLMUsage(provider=spec.provider, model=spec.model)
-        request = LLMRequest(spec.model, messages, None, temperature, max_tokens, reasoning_effort)
         last_error: Exception | None = None
         for attempt in range(MAX_ATTEMPTS):
             usage.retries = attempt
+            budget = max_tokens if attempt == 0 else max_tokens * RETRY_TOKEN_FACTOR
+            request = LLMRequest(spec.model, messages, None, temperature, budget, reasoning_effort)
             try:
                 raw, cached = await self._send(spec, request, usage)
             except TransientLLMError as exc:

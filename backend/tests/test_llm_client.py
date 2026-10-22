@@ -280,3 +280,12 @@ def test_success_after_retry_is_cached_for_the_first_request():
     structured(client)
     out, usage = structured(client)  # a rerun: same first request, now answered from the cache
     assert out.x == 5 and usage.cached and len(fake.calls) == 2
+
+
+def test_retry_gets_a_bigger_token_budget():
+    client, fake = make_client(["", '{"x": 1}'])  # first answer empty (budget spent on reasoning)
+    asyncio.run(client.structured(SPEC, MESSAGES, schema=SCHEMA, schema_name="out", convert=Out.model_validate))
+    assert [c.max_tokens for c in fake.calls] == [800, 2400]
+    client, fake = make_client(["", "hello"])
+    asyncio.run(client.text(SPEC, MESSAGES, max_tokens=100))
+    assert [c.max_tokens for c in fake.calls] == [100, 300]
