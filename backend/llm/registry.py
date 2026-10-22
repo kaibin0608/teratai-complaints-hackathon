@@ -61,6 +61,12 @@ def step_config(step: str) -> tuple[ModelSpec, JsonMode]:
     return ModelSpec.parse(value), mode
 
 
+def step_reasoning(step: str) -> str | None:
+    """Reasoning effort for a step, or None to leave the model's default."""
+    value = {"extract": config.LLM_EXTRACT_REASONING, "draft": config.LLM_DRAFT_REASONING}[step].strip()
+    return value or None
+
+
 def check_config() -> None:
     """Fail at startup, before any complaint is processed: every step's provider must exist and have its key."""
     for step in STEPS:

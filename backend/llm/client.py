@@ -104,6 +104,7 @@ class LLMClient:
         json_mode: JsonMode = "json_schema",
         temperature: float = 0.0,
         max_tokens: int = 800,
+        reasoning_effort: str | None = None,
     ) -> tuple[T, LLMUsage]:
         """Ask for JSON in the strongest mode the model supports; always validate with convert().
 
@@ -117,9 +118,11 @@ class LLMClient:
 
         usage = LLMUsage(provider=spec.provider, model=spec.model)
         last_error: Exception | None = None
+        first_request: LLMRequest | None = None
         for attempt in range(MAX_ATTEMPTS):
             usage.retries = attempt
-            request = LLMRequest(spec.model, messages, response_format, temperature, max_tokens)
+            request = LLMRequest(spec.model, messages, response_format, temperature, max_tokens, reasoning_effort)
+            first_request = first_request or request
             try:
                 raw, cached = await self._send(spec, request, usage)
             except TransientLLMError as exc:
@@ -134,6 +137,8 @@ class LLMClient:
                 continue
             if not cached:
                 self._remember(spec, request, raw)
+                if request is not first_request:  # a rerun sends the first request again: answer it from the cache
+                    self._remember(spec, first_request, raw)
             usage.cached = cached and attempt == 0
             return result, usage
         raise LLMError(f"{spec}: no valid output after {MAX_ATTEMPTS} attempts: {last_error}")
@@ -145,10 +150,11 @@ class LLMClient:
         *,
         temperature: float = 0.3,
         max_tokens: int = 600,
+        reasoning_effort: str | None = None,
     ) -> tuple[str, LLMUsage]:
         """Plain text completion (replies). One retry on a transient error or an empty answer."""
         usage = LLMUsage(provider=spec.provider, model=spec.model)
-        request = LLMRequest(spec.model, messages, None, temperature, max_tokens)
+        request = LLMRequest(spec.model, messages, None, temperature, max_tokens, reasoning_effort)
         last_error: Exception | None = None
         for attempt in range(MAX_ATTEMPTS):
             usage.retries = attempt

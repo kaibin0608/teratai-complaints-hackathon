@@ -25,7 +25,7 @@ from typing import Callable
 
 from backend import config
 from backend.agent.pipeline import run_pipeline
-from backend.agent.stubs import stub_draft
+from backend.agent.reply_generator import code_draft
 from backend.agent.tools import get_db, load_complaint
 from backend.contracts import AgentRun
 from backend.db.store import CaseConflict, CaseStore, HumanActedError, run_cost
@@ -133,7 +133,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, help="only the first N selected complaints")
     parser.add_argument("--concurrency", type=int, default=config.LLM_MAX_CONCURRENCY)
     parser.add_argument("--rerun", action="store_true", help="new runs even for complaints that are already done")
-    parser.add_argument("--no-draft", action="store_true", help="template replies, no drafting LLM calls")
+    parser.add_argument("--no-draft", action="store_true", help="code-written replies, no drafting LLM calls")
     parser.add_argument("--no-cache", action="store_true", help="send every LLM call to the provider")
     parser.add_argument("--db", type=Path, default=config.DB_PATH)
     args = parser.parse_args()
@@ -153,7 +153,7 @@ def main() -> None:
     store = CaseStore(args.db)
     print(f"Running {len(ids)} complaints ({args.ids}) with extractor {config.LLM_EXTRACT}, "
           f"concurrency {args.concurrency}, db {args.db}")
-    kwargs = {"draft": stub_draft} if args.no_draft else {}
+    kwargs = {"draft": code_draft} if args.no_draft else {}
     result = asyncio.run(run_batch(ids, store, concurrency=args.concurrency, rerun=args.rerun, pipeline_kwargs=kwargs))
     print(summarize(result))
     if result.failed or result.rejected:

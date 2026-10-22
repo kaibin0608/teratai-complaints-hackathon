@@ -256,3 +256,27 @@ def test_adapter_without_response_format_sends_no_provider_block():
 
     asyncio.run(adapter_with(handler, require_parameters=True).complete(LLMRequest("m", MESSAGES)))
     assert "provider" not in seen["body"] and "response_format" not in seen["body"]
+
+
+def test_reasoning_effort_is_sent_and_keys_unchanged_when_unset():
+    seen = {}
+
+    def handler(request):
+        seen["body"] = json.loads(request.content)
+        return ok_response("hi")
+
+    asyncio.run(adapter_with(handler).complete(LLMRequest("m", MESSAGES, reasoning_effort="none")))
+    assert seen["body"]["reasoning"] == {"effort": "none"}
+    import hashlib
+    legacy = hashlib.sha256(json.dumps({"provider": "p", "model": "m", "messages": MESSAGES, "response_format": None,
+                                        "temperature": 0.0, "max_tokens": 1024}, sort_keys=True,
+                                       ensure_ascii=False).encode()).hexdigest()
+    assert LLMRequest("m", MESSAGES).cache_key("p") == legacy  # cached extractions stay valid
+    assert LLMRequest("m", MESSAGES, reasoning_effort="none").cache_key("p") != legacy
+
+
+def test_success_after_retry_is_cached_for_the_first_request():
+    client, fake = make_client(['{"bad": 1}', '{"x": 5}'])
+    structured(client)
+    out, usage = structured(client)  # a rerun: same first request, now answered from the cache
+    assert out.x == 5 and usage.cached and len(fake.calls) == 2

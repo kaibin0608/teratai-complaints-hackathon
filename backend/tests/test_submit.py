@@ -96,4 +96,5 @@ def test_strict_writes_nothing_when_incomplete(tmp_path, monkeypatch):
     monkeypatch.setattr("sys.argv", ["submit", "--ids", str(ids_file), "--out", str(out), "--db", str(db)])
     with pytest.raises(SystemExit) as exit_info:  # default: write the valid rows, exit non-zero
         submit.main()
-    assert exit_info.value.code == 1 and len(out.read_text(encoding="utf-8").splitlines()) == 3
+    with open(out, encoding="utf-8", newline="") as fh:  # replies span lines: count CSV rows, not lines
+        assert exit_info.value.code == 1 and len(list(csv.DictReader(fh))) == 2

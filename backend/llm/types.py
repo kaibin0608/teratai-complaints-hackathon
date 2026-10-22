@@ -45,10 +45,14 @@ class LLMRequest:
     response_format: dict[str, Any] | None = None
     temperature: float = 0.0
     max_tokens: int = 1024
+    reasoning_effort: str | None = None  # OpenRouter reasoning.effort; None = the model's default
 
     def cache_key(self, provider: str) -> str:
         """Hash of everything that shapes the answer, so any prompt or schema edit misses the cache."""
-        canonical = json.dumps({"provider": provider, **asdict(self)}, sort_keys=True, ensure_ascii=False)
+        fields = asdict(self)
+        if fields["reasoning_effort"] is None:  # unset keeps the keys of responses cached before the field existed
+            del fields["reasoning_effort"]
+        canonical = json.dumps({"provider": provider, **fields}, sort_keys=True, ensure_ascii=False)
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 

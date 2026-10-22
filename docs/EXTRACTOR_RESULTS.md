@@ -1,6 +1,10 @@
-# Extractor evaluation results
+# Evaluation results
 
-How well the LLM extractor (`backend/agent/parser.py`) turns complaint text into clues, and how often Dev A's engine then picks the right transaction. Measured against `data/labels_train.csv`.
+What we measured and decided for Dev B's LLM steps, against `data/labels_train.csv`:
+- the extractor (`backend/agent/parser.py`), and how often Dev A's engine then picks the right transaction
+- the official training score
+- the reply writer
+- the 750-complaint submission file
 
 ## Decision
 
@@ -74,6 +78,43 @@ Top-1 96.5%, category 97.8%, reply language 94.3%, cost RM0. Main gaps: 39 SERVI
 | Formal Malay flagged as mixed → wrong reply language | 2 | Lost points | Possibly a side effect of the v2 wording. Check on unused training complaints, not on the holdout. |
 | ATM location "missed" | 1 | None | Evaluator false alarm ("hari Khamis **lepas**" matched "Bayan **Lepas**"). |
 
+## Replies (b-reply-writer)
+
+**Default: `openrouter:anthropic/claude-haiku-5.5`, `LLM_DRAFT_REASONING=none`, prompt `draft-v3`** (2026-10-22). Code supplies the facts (amounts, transaction reference, customer-safe reason, next-update date, safety advice) and the status wording. The model only words the reply. Every reply passes Dev A's evidence check plus our rules (refund amount stated, no "has been refunded" before money moves, right language, length).
+
+Pilot, 50 complaints:
+
+| | Code template | DeepSeek v4 Flash | Claude Haiku 5.5 |
+|---|---|---|---|
+| Passed checks, first draft / after redraft | 50 / 50 | 50 / 50 | 49 / 50 (v3) |
+| Fell back (empty reply) | – | 0 with reasoning off; 4–10 with the default `high` | 0 |
+| Refund amount stated | 18 / 18 | 18 / 18 | 18 / 18 |
+| Words per reply | 61 | 98 | 109 |
+| Cost per reply | RM0 | RM0.0003 | RM0.0011 |
+| Drafting latency mean / p95 | – | 3.4 s / 9.0 s | 2.3 s / 3.2 s |
+
+Reading 7 pairs side by side: Haiku is warmer and better structured, and its Malay is more natural. DeepSeek wrote "no compensation or refund will be provided" on a service complaint and invented "a gesture of goodwill". Prompt v2 and v3 fixed the issues found in both: slash sign-offs, invented reasons, times of day, a possible authentication-method leak. In the v3 pilot: 0 slash sign-offs, 0 times, 0 invented reasons, 0 authentication mentions.
+
+## Test set: the submission file
+
+`submissions/Santa_Claude/predictions.csv`, from `runner --ids test --rerun` and then `submit --ids test` (2026-10-22). Settings: DeepSeek v4 Flash extraction, Haiku 5.5 replies (`LLM_DRAFT_REASONING=none`), prompts `extract-v2` and `draft-v3`.
+
+| | Result |
+|---|---|
+| Rows | 750 / 750, valid (unique IDs, valid values, two-decimal refunds, non-empty replies) |
+| Replies | all 750 by Haiku 5.5; all pass Dev A's evidence check plus our reply rules; mean 111 words |
+| Routes | HUMAN_APPROVAL 354, AUTO_RESOLVE 248, FRAUD_TEAM 148 |
+| Holds | ambiguous_match 82; `self_check_failed` 0 |
+| Cost of the rerun | RM0.82 (RM0.0011 per complaint; extraction from the cache) |
+| Latency | 2.4 s mean, 3.1 s p95 per complaint |
+| Scans on all 750 replies | 0 slash sign-offs, 0 times of day, 0 authentication details, 0 invented reasons (3 flags checked by hand: "pengesahan" = confirmation; one "applied in error" right after the real 60+ reason) |
+
+The first test run (template replies, RM1.08 for extraction) is replaced by this one. Spend so far across all runs: about RM4.
+
+Fixes from these runs:
+- **One extraction fell back on rerun (CMP-00423).** Its earlier success came on the retry, and the cache had stored it only under the retry request. The client now also caches a retried success under the first request, so reruns repeat.
+- **SQLite WAL side files** (`*.db-wal`, `*.db-shm`) added to `.gitignore`. They hold case data, and the repo is public.
+
 ## How to reproduce
 
 Needs `OPENROUTER_API_KEY` in `.env`. LLM responses are cached in `backend/.cache/llm_cache.db`, so a rerun with the same prompt and model costs nothing.
@@ -88,5 +129,20 @@ python -m backend.eval.clue_eval --extractor backend.agent.parser:extract --engi
 ```
 
 `--details` writes one row per field per complaint (verdict, extracted value, gold value, text), for error analysis.
+
+```bash
+# Official training score (template replies; replies aren't scored)
+python -m backend.batch.runner --ids train --no-draft
+python -m backend.batch.submit --ids train --score --details backend/.cache/train_details.csv
+
+# Reply writer on the pilot, one model at a time; writes the replies to a CSV to read
+python -m backend.eval.reply_eval --model openrouter:anthropic/claude-haiku-5.5
+
+# The submission file (add --rerun after a prompt or model change)
+python -m backend.batch.runner --ids test
+python -m backend.batch.submit --ids test        # → submissions/<TEAM_NAME>/predictions.csv
+```
+
+After any large run, check the runner's `llm_error` warning, and rerun those IDs with `--rerun`.
 
 Rules: tune on the pilot (or on the 1,348 training complaints that are in neither set). Only check on the holdout, never tune against it.

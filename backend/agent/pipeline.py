@@ -9,17 +9,19 @@ without a decision.
 """
 from __future__ import annotations
 
+import functools
 import uuid
 
 from backend.agent.engine import match_and_decide
 from backend.agent.parser import extract as llm_extract
+from backend.agent.reply_generator import code_draft, draft as llm_draft
+from backend.agent.reply_rules import combined_check
 from backend.agent.router import hold
-from backend.agent.self_check import check_reply
-from backend.agent.stubs import fake_extract, stub_draft
+from backend.agent.stubs import fake_extract
 from backend.contracts import (
     AgentRun, Checker, Complaint, Decision, Drafter, Engine, EngineResult, Extractor, LLMUsage, RunKind,
 )
-from backend.llm.prompts import CLUES_SCHEMA_VERSION, EXTRACT_PROMPT_VERSION
+from backend.llm.prompts import CLUES_SCHEMA_VERSION, DRAFT_PROMPT_VERSION, EXTRACT_PROMPT_VERSION
 
 MAX_REDRAFTS = 1
 
@@ -36,13 +38,13 @@ def note_error(run: AgentRun, message: str) -> None:
 async def draft_or_template(
     draft: Drafter, result: EngineResult, feedback: list[str] | None, run: AgentRun,
 ) -> tuple[str, LLMUsage, bool]:
-    """(reply, usage, llm_failed). A drafter failure falls back to the template reply in the decision's language."""
+    """(reply, usage, llm_failed). A drafter failure falls back to the code-written reply (facts only)."""
     try:
         reply, usage = await draft(result, feedback)
         return reply, usage, False
     except Exception as exc:
-        note_error(run, f"draft failed, used template reply: {exc}")
-        reply, usage = await stub_draft(result)
+        note_error(run, f"draft failed, used code-written reply: {exc}")
+        reply, usage = await code_draft(result)
         return reply, usage, True
 
 
@@ -51,8 +53,8 @@ async def run_pipeline(
     *,
     extract: Extractor = llm_extract,
     engine: Engine = match_and_decide,
-    draft: Drafter = stub_draft,
-    check: Checker = check_reply,
+    draft: Drafter | None = None,  # None: the LLM reply writer for this complaint (LLM_DRAFT)
+    check: Checker = combined_check,
     run_kind: RunKind = "autonomous",
 ) -> AgentRun:
     run = AgentRun(run_id=uuid.uuid4().hex, complaint_id=complaint.complaint_id, run_kind=run_kind,
@@ -73,6 +75,8 @@ async def run_pipeline(
         note_error(run, f"engine failed: {exc}")
         return run
     run.match, run.decision, run.evidence = result.match, result.decision, result.evidence
+    if draft is None:
+        draft = functools.partial(llm_draft, complaint=complaint)
 
     reply, usage, failed = await draft_or_template(draft, result, None, run)
     llm_failed |= failed
@@ -86,6 +90,7 @@ async def run_pipeline(
         run.self_check = check(reply, result)
 
     run.reply_text = reply
+    run.prompt_version += "+" + ("code-template" if usage.provider == "fake" else DRAFT_PROMPT_VERSION)
     if not run.self_check.passed:
         run.decision = hold(run.decision, "self_check_failed")
     if llm_failed:

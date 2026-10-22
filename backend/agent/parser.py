@@ -9,7 +9,7 @@ from backend.agent.stubs import fake_extract
 from backend.contracts import Clues, Complaint, LLMUsage
 from backend.llm.client import get_client
 from backend.llm.prompts import CLUES_WIRE_SCHEMA, build_extract_messages, wire_to_clues
-from backend.llm.registry import step_config
+from backend.llm.registry import step_config, step_reasoning
 
 
 async def extract(complaint: Complaint) -> tuple[Clues, LLMUsage]:
@@ -25,4 +25,5 @@ async def extract(complaint: Complaint) -> tuple[Clues, LLMUsage]:
         json_mode=json_mode,
         temperature=0.0,
         max_tokens=600,
+        reasoning_effort=step_reasoning("extract"),
     )

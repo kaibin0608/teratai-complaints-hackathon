@@ -41,9 +41,9 @@ def test_extract_failure_on_fraud_stays_with_fraud_team():
     assert (r.decision.route, r.decision.hold_reason) == ("FRAUD_TEAM", "llm_error")
 
 
-def test_draft_failure_uses_template_and_holds():
+def test_draft_failure_uses_code_reply_and_holds():
     r = run("CMP-00002", draft=failing_draft)  # service complaint, would otherwise auto-resolve
-    assert r.reply_text.startswith(("Thank you", "Terima kasih"))
+    assert r.reply_text.startswith(("Dear ", "Yang dihormati ", "Tuan/Puan"))  # the code-written reply
     assert (r.decision.hold_reason, r.decision.route) == ("llm_error", "HUMAN_APPROVAL")
     assert "draft failed" in r.error
 
@@ -64,9 +64,9 @@ def test_healthy_run_has_no_error_and_records_versions():
 
     r = run("CMP-00001", extract=llm_like_extract)
     assert r.error is None and r.decision.hold_reason != "llm_error"
-    assert (r.prompt_version, r.schema_version) == (EXTRACT_PROMPT_VERSION, CLUES_SCHEMA_VERSION)
+    assert (r.prompt_version, r.schema_version) == (f"{EXTRACT_PROMPT_VERSION}+code-template", CLUES_SCHEMA_VERSION)
 
 
 def test_keyword_run_is_labelled_as_such():
     r = run("CMP-00001")  # default config: fake:keywords
-    assert r.prompt_version == "keywords"
+    assert r.prompt_version == "keywords+code-template"

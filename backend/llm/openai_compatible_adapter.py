@@ -63,6 +63,8 @@ class OpenAICompatibleAdapter:
             "temperature": request.temperature,
             "max_tokens": request.max_tokens,
         }
+        if request.reasoning_effort:
+            body["reasoning"] = {"effort": request.reasoning_effort}
         if request.response_format:
             body["response_format"] = request.response_format
             if self.require_parameters:

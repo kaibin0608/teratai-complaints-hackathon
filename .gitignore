@@ -7,6 +7,8 @@ details.csv
 .DS_Store
 .pytest_cache/
 *.db
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
 backend/.cache/
