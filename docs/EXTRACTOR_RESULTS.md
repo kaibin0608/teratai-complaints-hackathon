@@ -182,6 +182,38 @@ Not changed: **the ±10% approximate-amount band.** 10 of 248 "about" amounts ar
 
 Dev A's own tests asserted the old behaviour ("kelmarin" = yesterday; "last week" = the 7 days before). Those two were updated with the data behind the change. `backend/tests/test_engine_fixes.py` adds 18 regression tests; all fail on the old code.
 
+## UI read API (b-ops-read-api)
+
+These are four read-only routes for the React UI, documented for the UI developer in [UI_API.md](UI_API.md): `/api/cases`, `/api/cases/{id}`, `/api/metrics` and `/api/audit`.
+
+**Speed** (uvicorn on a copy of the batch database, 2,500 cases, timed with curl):
+
+| Route | Time |
+|---|---|
+| `/api/cases?queue=awaiting_approval` (1,115 matches, first 50) | 42 ms |
+| `/api/cases?limit=500` | 128 ms |
+| `/api/cases/CMP-00244` | 5 ms |
+| `/api/metrics` | 213 ms |
+| `/api/audit?limit=200` | 18 ms |
+
+Calling `localhost` from Windows curl adds about 0.2 s to every request, because it tries IPv6 first; `127.0.0.1` doesn't. The guide tells the UI to use `127.0.0.1`.
+
+**The contract is unchanged.** `scoring/api_check.py` on a fresh API database with the real models scores **100.0**, with case state and sent correct 10/10 and **9/9 probes**, as before. The new routes then showed:
+- 11 cases, auto-resolve rate 0.45
+- the probe's approval (override rate 0.0), and its refused edit counted under self-check catches
+- one `customer_not_found` hold
+- cost per complaint RM0.0010 (p95 RM0.0014)
+- latency p50 2.6 s, p95 4.6 s
+
+The latency here is the pipeline's own time. `api_check`'s "median 6.0 s" also counts its 2-second polling and the queue.
+
+**The 2,500-case batch database** (all training and test complaints, real models): auto-resolve rate 0.346; mean cost RM0.0008 per complaint (it's lower than the RM0.0013 median because reruns served from the LLM cache cost 0); latency p50 3.1 s, p95 8.1 s.
+
+**Decisions:**
+- **No login yet**; it will be added later on the same routes (Dev B, 2026-10-23).
+- **CORS open to any origin**: the UI's address on the venue network isn't known in advance, there are no cookies, and the contract routes are already open.
+- **SLA uses an `as_of` clock**: the complaints are dated July–September 2026, so against today's date every open case is overdue. The demo passes `as_of=2026-09-30T16:30`.
+
 ## How to reproduce
 
 Needs `OPENROUTER_API_KEY` in `.env`. LLM responses are cached in `backend/.cache/llm_cache.db`, so a rerun with the same prompt and model costs nothing.

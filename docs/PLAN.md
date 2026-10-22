@@ -483,6 +483,8 @@ Checkpoint 2 (Day 2 12:00) needs decision, reply, approval and write-back on 50 
 
 **2.3 Bonus platform endpoints (`/api/*`, authenticated)**
 
+**Built, open for now (b-ops-read-api):** the four read routes `GET /api/cases`, `GET /api/cases/{id}`, `GET /api/metrics` and `GET /api/audit`, documented for the UI in [UI_API.md](UI_API.md). They have no login yet; the bonus login adds the role checks below to these same routes without changing their shape.
+
 These serve the role screens. They read the same case store and record the same `human_action` / `case_events`; first-tier approve and reject go through the same function as `POST /cases/{id}/actions`.
 - `POST /api/auth/login` — returns JWT with role
 - `GET /api/auth/me` — current user + role + approval_limit

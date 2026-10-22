@@ -9,9 +9,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend import config
 from backend.agent.tools import get_db
+from backend.api import audit, cases, metrics
 from backend.api.contract import AgentService, Pipeline, router
 from backend.db.store import CaseStore
 from backend.llm.registry import check_config
@@ -32,7 +34,11 @@ def create_app(db_path: Path | str | None = None, pipeline: Pipeline | None = No
             task.cancel()
 
     app = FastAPI(title="Teratai complaints agent", lifespan=lifespan)
+    # The React UI runs on another origin (localhost:5173 or a teammate's laptop). No cookies, so "*" is safe.
+    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
     app.include_router(router)
+    for ui in (cases, metrics, audit):
+        app.include_router(ui.router)
     return app
 
 
