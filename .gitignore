@@ -16,3 +16,6 @@ inbox/*
 !inbox/.gitkeep
 node_modules/
 frontend/dist/
+
+# Claude Code: share the project commands and skills, never personal settings
+.claude/settings.local.json
