@@ -59,7 +59,8 @@ DUPLICATE_CHARGE, FAILED_TRANSFER, ATM_NOT_DISPENSED, UNAUTHORISED_CARD, SCAM_TR
 
 - **Priority:** P1 (scam, unauthorised), P2 (duplicate, failed transfer, ATM), P3 (fee, service). Customer aged 65+ on received_at bumps one level up.
 - **Reply language:** language of complaint text. Mixed language or call-centre note → customer's `preferred_language`.
-- **Routing:** INVESTIGATE → FRAUD_TEAM. DECLINE or refund > RM500 → HUMAN_APPROVAL. Everything else → AUTO_RESOLVE.
+- **Routing:** INVESTIGATE → FRAUD_TEAM. DECLINE → HUMAN_APPROVAL. REFUND > RM500 → HUMAN_APPROVAL (RM500.00 exactly = AUTO_RESOLVE). INFO_ONLY → AUTO_RESOLVE.
+- **FEE_DISPUTE refund logic:** `refund = charged - amount_due`. amount_due from fee_schedule.csv with waivers: Basic Savings monthly = RM0, debit card annual waived if customer 60+ on **charge date**, credit card annual waived if charge date < first anniversary of account `open_date`. If refund > 0 → REFUND, else DECLINE.
 
 ## Three platform roles (bonus ops platform)
 

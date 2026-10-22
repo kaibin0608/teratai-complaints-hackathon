@@ -210,36 +210,53 @@ approval_limit_myr    e.g. 5000.00 (NULL for manager = no limit)
   - "yesterday" / "semalam" → day before received
   - "last Tuesday" / "hari Selasa lepas" → most recent Tuesday before received
   - "last week" / "minggu lepas" → 7-day window
-  - "last month" → 30-day window
+  - "last month" / "bulan lepas" → calendar month before received_at (e.g., received Aug 15 → Jul 1–31)
+  - Named month ("July" / "bulan Julai") → that calendar month in the most recent year within 45-day window
+  - FEE_DISPUTE specifically: complaint_policy.csv says "the month the customer names" — resolve to that calendar month, not a rolling window
   - Exact dates pass through
 - Output: (start_date, end_date) range
 
 **1.4 Transaction Matcher — Code, THE CRITICAL PATH (2.5 hrs)**
+
+Matching answers "which transaction is the customer talking about?" — it finds the transaction ID. Policy (step 1.5) answers "what should happen to it?" A complaint can refer to a completed transfer and still need a matched ID — the outcome is DECLINE, but the match is correct.
+
 - Filter: customer's debits, within 45-day window (`MATCH_WINDOW_DAYS` from params)
 - Multi-signal scoring: amount match (exact or ±5%), merchant/counterparty substring, date in range, card_last4, channel family
-- Category-specific matching:
-  - **DUPLICATE_CHARGE:** two identical amounts to same merchant within 10 min, neither reversed. Return later one
-  - **FAILED_TRANSFER:** DuitNow/IBG, status=Failed, not reversed
-  - **ATM_NOT_DISPENSED:** ATM Withdrawal where atm_journal shows PARTIAL_DISPENSE or DISPENSE_FAULT
-  - **UNAUTHORISED_CARD:** Card POS/e-Commerce, check auth_method for decision
-  - **SCAM_TRANSFER:** DuitNow/IBG transfer out
-  - **FEE_DISPUTE:** channel=Fee, cross-ref fee_schedule for product+waiver rules
+- Category-specific matching (find the transaction, don't decide outcome here):
+  - **DUPLICATE_CHARGE:** find the disputed later card charge by amount, merchant, date. Then look for an earlier charge on **the same card** with same merchant and same amount. matched_txn_id = the later charge
+  - **FAILED_TRANSFER:** match DuitNow/IBG transfer debit by recipient, amount, date — regardless of status or reversal. Match even if completed or reversed
+  - **ATM_NOT_DISPENSED:** match ATM Withdrawal by amount, date, location — regardless of journal result. Match even if fully dispensed
+  - **UNAUTHORISED_CARD:** match Card POS/e-Commerce debit by amount, merchant, date, card
+  - **SCAM_TRANSFER:** match DuitNow/IBG transfer out by recipient, amount, date
+  - **FEE_DISPUTE:** match Fee channel debit by fee type and month the customer mentions
   - **SERVICE_QUALITY:** no transaction, matched_txn_id = empty
 - Confidence: if 1 candidate, high. If 0 or multiple, flag and pick best or none
 
 **1.5 Policy Engine — Code (1 hr)**
-- Reads `complaint_policy.csv` + `policy_parameters.csv`
+
+Policy answers "what should happen?" given the matched transaction and its evidence. Reads `complaint_policy.csv` + `policy_parameters.csv`.
+
 - Per category decision rules:
-  - DUPLICATE_CHARGE: neither reversed → REFUND later charge. Already reversed → DECLINE
-  - FAILED_TRANSFER: Failed + not reversed → REFUND. Reversed or Completed → DECLINE
-  - ATM_NOT_DISPENSED: shortfall (requested - dispensed) → REFUND difference
-  - UNAUTHORISED_CARD: no strong auth (None) → REFUND. 3DS-OTP/Chip+PIN → INVESTIGATE
-  - SCAM_TRANSFER: always INVESTIGATE
-  - FEE_DISPUTE: fee wrongly charged (waiver applies) → REFUND. Correctly charged → DECLINE
+  - **DUPLICATE_CHARGE:** check same card, same merchant, same amount, within 10 min, neither reversed → REFUND later charge. If conditions don't hold (different cards, >10 min apart, already reversed) → DECLINE
+  - **FAILED_TRANSFER:** check status and reversal. Failed + no reversal → REFUND. Has reversal → DECLINE (tell customer when returned). Status Completed → DECLINE (money reached recipient)
+  - **ATM_NOT_DISPENSED:** check atm_journal. If dispensed < requested → REFUND the shortfall (requested - dispensed). If fully dispensed → DECLINE
+  - **UNAUTHORISED_CARD:** check auth_method. None (no strong auth) → REFUND. 3DS-OTP or Chip+PIN → INVESTIGATE (fraud team, no refund now)
+  - **SCAM_TRANSFER:** always INVESTIGATE (fraud team for recall attempt, no refund now)
+  - **FEE_DISPUTE:** compute correct fee and refund any overcharge:
+    1. Look up correct fee from `fee_schedule.csv`: match fee description prefix to `fee_name`, account `product` to fee's `product`
+    2. Apply waivers to get `amount_due`:
+       - Basic Savings monthly service charge: `amount_due = 0` (never chargeable)
+       - Debit card annual fee: `amount_due = 0` if customer age >= 60 **on the charge date** (NOT received_at)
+       - Credit card annual fee (Classic RM150 / Platinum RM250): `amount_due = 0` if charge date < first anniversary of account `open_date`
+       - No waiver: `amount_due` = fee_schedule amount
+    3. `refund = charged - amount_due`. If refund > 0 → REFUND that amount (includes both waiver and overcharge cases). Else DECLINE
+    - Overcharge example: Current Account charged RM20 monthly, schedule = RM10 → refund RM10
+    - Waiver example: CC Classic RM150, opened 6 months ago → first-year waiver → refund RM150
+    - Correct example: Savings Plus RM2 monthly, no waiver → DECLINE
   - SERVICE_QUALITY: INFO_ONLY
-- Priority: base from policy + bump one level if customer age >= 65 on received_at
-- Reply language: complaint language. Mixed/call-centre → customer's preferred_language
-- Route: INVESTIGATE → FRAUD_TEAM. DECLINE or refund > RM500 → HUMAN_APPROVAL. Else AUTO_RESOLVE
+- Priority: base from policy + bump one level if customer age >= 65 on received_at. P1 stays P1
+- Reply language: complaint language. Mixed/call-centre → customer's `preferred_language`
+- Route: INVESTIGATE → FRAUD_TEAM. DECLINE → HUMAN_APPROVAL. REFUND > RM500 → HUMAN_APPROVAL (boundary: RM500.00 exactly = AUTO_RESOLVE). INFO_ONLY → AUTO_RESOLVE. Else AUTO_RESOLVE
 
 **1.6 Reply Generator — LLM step (1 hr)**
 - Input: decision, evidence pack, reply_language, category
@@ -322,7 +339,7 @@ Designed for speed — get correct reply to customer quickly.
   - Evidence panel: matched transaction, verification status
   - Self-check status badge
 - Actions: **Approve / Edit & Approve / Reject (with reason) / Send Back**
-- Approval headroom shown: "Your limit: RM5,000. This refund: RM480. ✓"
+- Approval headroom shown: "Your limit: RM5,000. This refund: RM550. ✓"
 - Over limit: Approve button replaced with **"Escalate to Manager"**
 - **Self-check re-runs on edit** — blocks send if invented facts detected
 - After action → auto-advance to next case
@@ -421,7 +438,7 @@ Context-aware assistant accessible from case detail, any role.
 - **Everything in one view** — complaint, customer, transaction, decision, evidence, reply
 - **Flag-to-text highlighting** — self-check issues linked to exact words in reply
 - **Evidence quality markers** — verified / missing / conflicting. Gaps first
-- **Safe fallback visible** — "If nobody acts: auto-decline"
+- **Safe fallback visible** — "If nobody acts: case stays pending, flagged overdue" (policy does not authorize auto-decline — cases wait and escalate)
 
 ### Decision flow
 - **Fixed button order** — Reject, Escalate, Edit, Approve (consistent muscle memory)
@@ -568,7 +585,7 @@ frontend/
 - Case appears in correct queue (HUMAN_APPROVAL or FRAUD_TEAM)
 
 **3. Drive three cases end-to-end (3 min)**
-- **Case A:** HUMAN_APPROVAL, refund RM480 (within officer limit) → officer approves → "sent"
+- **Case A:** HUMAN_APPROVAL, refund RM550 (> RM500 so routed to HUMAN_APPROVAL, within officer's RM5,000 limit) → officer approves → "sent"
 - **Case B:** HUMAN_APPROVAL, refund RM6,000 (over limit) → officer escalates → login as manager → second-tier approve → "sent"
 - **Case C:** FRAUD_TEAM → login as fraud analyst → acknowledge → log investigation → customer sees only holding reply
 
