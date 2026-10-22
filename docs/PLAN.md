@@ -1,13 +1,15 @@
 # Teratai Bank Complaints Agent — Build Plan
 
 > The team's single build plan. Goal: meet every core requirement **and** the bonus ops platform.
-> Sources of truth, in order: [README.md](../README.md), [bonus_platform.md](bonus_platform.md), [build_guide.md](build_guide.md), [scoring.md](scoring.md), and the policy CSVs in `data/`. Where this plan disagrees with them, they win — fix the plan.
+> Sources of truth, in order: [README.md](../README.md), [api.md](api.md) (the fixed API contract), [bonus_platform.md](bonus_platform.md), [build_guide.md](build_guide.md), [scoring.md](scoring.md), and the policy CSVs in `data/`. Where this plan disagrees with them, they win — fix the plan.
 
 Backend first, frontend second. Core before bonus, but the data model supports the bonus from day one.
 
 ## Explainer
 
 **▶ [Watch the Teratai Complaints Explainer](https://claude.ai/artifact/Hk9ZvLQa1ctHfCnexmjjUQ)**: an interactive, narrated walkthrough of the brief and this plan (animated scenes, voice-over, live captions; pick any chapter or scene from the list on the page).
+
+> Recorded before the organisers' API update (22 Oct, 17:47–19:26). Its live round (judges typing complaints), 8-minute demo, 15:15 slot and `/api/*` endpoints are out of date: this plan and [api.md](api.md) are current.
 
 | Chapter | Covers | Length |
 |---|---|---|
@@ -24,14 +26,14 @@ Backend first, frontend second. Core before bonus, but the data model supports t
 | Weight | Criterion | How judged |
 |---|---|---|
 | 30% | Accuracy | Leaderboard score on 750 test complaints |
-| 25% | Agent design & guardrails | Live round: judges type 2-3 new complaints (CSV format, received_at = 2026-09-30). Routing, approval wait, reacts on its own, self-check catches bad replies |
+| 25% | Live round | **Hidden test (15):** right after the 15:00 freeze, `scoring/api_check.py` sends 20 unseen, messily written complaints to our API at once and scores them like the leaderboard (score × 0.15); 120 s per complaint or it scores 0. **Human gate (10):** in the demo, judges send 3 complaints one at a time and tick a checklist (case appears on its own, right transaction/decision/refund/route, approval holds, fraud lands in the fraud queue, reply language, self-check visible) |
 | 25% | Business value & demo | Reply quality, tone, language, no invented facts; judges read 10 replies |
 | 20% | Engineering | Architecture, observability (show why it decided), **cost and speed per complaint** |
 
 Per complaint (max 100 pts):
 - matched_txn_id: 25 — outcome: 25 (gated on txn) — refund_amount_myr: 25 (gated on txn, within RM0.005) — category: 10 — priority: 10 — reply_language: 5
 - Critical errors (wrongful refund, missed fraud): `final = mean × (1 − 2 × error_rate)`
-- `route` and `reply_text` are not auto-scored, but judges check both
+- `route` and `reply_text` are not auto-scored, but judges check both. Automatic reply checks run on **every** reply and go to the judges: empty reply, wrong language, TXN-IDs or RM amounts not in the evidence, and **a refund reply that doesn't state the refund amount**
 
 **Bonus: Best Ops Platform (separate award, does not affect main ranking):**
 - Human gate holds: approval cases wait, fraud cases land with fraud team, escalations wait for manager, nothing sent without a human
@@ -41,23 +43,19 @@ Per complaint (max 100 pts):
 - Append-only audit trail; agent-vs-human gap visible
 - Agent decision immutable, separate from human final action
 
-**Live round format:**
-```
-complaint_id,customer_id,received_at,channel,subject,text
-LIVE-07,CUS-01234,2026-09-30 10:15,App chat,,"Hi, I was charged twice..."
-```
-Customer + transaction already exist in data. System must accept without code changes, process on its own, and show the case record with evidence, route and reply.
+**Live round format:** everything goes through the fixed API in [api.md](api.md): `POST /complaints` with the six `complaints.csv` fields as JSON ([examples/live_complaint_example.json](../examples/live_complaint_example.json)), then `GET /cases/{id}` until `status = done`, and `POST /cases/{id}/actions` for the human gate. Customers and transactions already exist in the data; each complaint carries its own `received_at` (not always 30 Sep). Hidden-test complaints are written like real customers write: typos, SMS short forms, emoji, mixed English and Malay. Our calls carry no credentials. Robustness probes and per-complaint timing feed the engineering score. Self-test any time: `python scoring/api_check.py http://localhost:8000`.
 
 **Event checkpoints (from README):**
 
 | When | Checkpoint | What must work |
 |---|---|---|
 | Day 1 16:00 | Checkpoint 1 | Classify + match the right transaction for 20 training complaints |
-| Day 2 12:00 | Checkpoint 2 | Full workflow (decision, reply, approval, write-back) on 50 training complaints; training score posted |
-| Day 2 15:00 | Predictions due | PR `Submission: <team-name>` with `submissions/<team-name>/predictions.csv`; code freeze |
-| Day 2 15:15 | Demo | 8 min including live round |
+| Day 2 12:00 | Checkpoint 2 | Full workflow (decision, reply, approval, write-back) on 50 training complaints; training score posted; **`scoring/api_check.py` passes against our API**; organisers confirm they can reach it from their laptop |
+| Day 2 15:00 | Agent + API freeze | Predictions due (PR with commit hash and API URL). API must be running from now until our demo ends; the hidden test runs 15:00–15:45 |
+| Day 2 15:00–16:30 | UI time | Agent is frozen; keep working on the UI and the bonus ops platform only |
+| Day 2 16:30 | Demo | About 10 min: presentation, human gate (3 complaints), ops platform |
 
-**Submission:** Fork repo, build in fork, PR from fork to upstream titled `Submission: <team-name>`. PR needs predictions.csv only; code stays in fork.
+**Submission:** Fork repo, build in fork, PR from fork to upstream titled `Submission: <team-name>`. PR needs predictions.csv only; code stays in fork. **The PR description must give our freeze commit hash (last commit at 15:00) and our API URL.** Changes to the agent after 15:00 don't count.
 
 ---
 
@@ -65,12 +63,14 @@ Customer + transaction already exist in data. System must accept without code ch
 
 | Tier | Contents |
 |---|---|
-| **Core (required)** | Event-driven intake (API + watched folder), LLM extraction, code matching/policy/refund, LLM reply, code self-check, case record in DB, approval queue + fraud queue with a real human gate, write-back, 750-complaint export |
-| **Bonus MVP** | Sign-in with seeded users, role-filtered queues, officer resolution desk, fraud workbench, manager console with second-tier approval and reassignment, append-only audit, self-check on edits, agent-vs-human comparison |
+| **Core (required)** | The fixed API from [api.md](api.md) (no auth; reachable from the organisers' laptop), LLM extraction robust to messy text, code matching/policy/refund, LLM reply, code self-check, case record in DB, approval queue + fraud queue with a real human gate (`case_state`, `sent`, `POST /cases/{id}/actions` with a typed actor name), outbox, 750-complaint export, a simple UI showing queues, a case and the approval step |
+| **Bonus MVP** | Sign-in with seeded users (auth and roles are bonus only; the core needs neither), role-filtered queues, officer resolution desk, fraud workbench, manager console with second-tier approval and reassignment, append-only audit, self-check on edits, agent-vs-human comparison |
 | **Bonus extras** | Officer/analyst chatbot panel, manager charts, WebSocket live push, SLA timers, notifications |
-| **Out of scope** | Real money movement, real customer messaging, production identity, cloud deployment, vector DBs, policy-editing UI |
+| **Out of scope** | Real money movement, real customer messaging, production identity, cloud hosting (venue Wi-Fi or a tunnel is enough), vector DBs, policy-editing UI, API keys or rate limits on our API |
 
-Refunds and customer messages are **simulated**: the backend enforces the approval gate and writes an outbound record, and the UI labels it as simulated.
+Refunds and customer messages are **simulated**: the backend enforces the approval gate and writes an outbound record (the outbox), and the UI labels it as simulated.
+
+**Watched folder:** the README no longer asks for one; the live round uses `POST /complaints` only. Keep `inbox/` as an optional convenience that calls the same intake function.
 
 ---
 
@@ -94,9 +94,9 @@ After Step 0 merges, A and B work independently and integrate through PRs at the
 
 | | Dev A — decision engine | Dev B — platform and LLM |
 |---|---|---|
-| Owns | `agent/tools.py`, `date_resolver.py`, `transaction_matcher.py`, `categories/*`, `router.py` (route, priority, language, hold, SLA), `self_check.py`, `eval/` | `llm/*` (interface, adapters, prompts, cache, cost), `agent/parser.py`, `reply_generator.py`, `pipeline.py`, `db/`, `auth/`, `api/` (intake, watched folder, cases, approval/fraud actions, gated outbound), `batch/` (runner, export, validation) |
-| Order | 1. Tools + date resolver<br>2. ATM handler (sets the pattern)<br>3. Unauthorised card, scam<br>4. Failed transfer, duplicate<br>5. Fee<br>6. Service quality<br>7. Self-check + routing/hold | 1. LLM interface + first adapter + extraction prompt<br>2. Pipeline + DB persistence<br>3. Intake API + watched folder<br>4. Reply drafting + redraft loop<br>5. Case/approval/fraud endpoints + gated send<br>6. Batch runner + export<br>7. Second adapter + pilot comparison |
-| Tests | Each handler scored on `labels_train.csv` without LLM calls; boundary tests (RM500, 10 min, birthdays, fee anniversaries) | Gate tests (over-limit approve, send without approval, edit clears approval, repeat intake, double click); export validation |
+| Owns | `agent/tools.py`, `date_resolver.py`, `transaction_matcher.py`, `categories/*`, `router.py` (route, priority, language, hold, SLA), `self_check.py`, `eval/` | `llm/*` (interface, adapters, prompts, cache, cost), `agent/parser.py`, `reply_generator.py`, `pipeline.py`, `db/`, `api/` (the [api.md](api.md) contract first; bonus `/api/*` routes and `auth/` later), `batch/` (runner, export, validation), serving the API on the venue network |
+| Order | 1. Tools + date resolver<br>2. ATM handler (sets the pattern)<br>3. Unauthorised card, scam<br>4. Failed transfer, duplicate<br>5. Fee<br>6. Service quality<br>7. Self-check + routing/hold | 1. LLM interface + first adapter + extraction prompt<br>2. Pipeline + DB persistence<br>3. Reply drafting + redraft loop<br>4. Batch runner + export<br>5. **Contract API** (`/complaints`, `/cases/{id}`, `/cases/{id}/actions`, `/health`) passing `api_check.py`<br>6. Reachability (host `0.0.0.0` or tunnel) + messy-text prompt hardening<br>7. Bonus routes, auth, second adapter |
+| Tests | Each handler scored on `labels_train.csv` without LLM calls; boundary tests (RM500, 10 min, birthdays, fee anniversaries) | `scoring/api_check.py` (contract, scores, robustness and human-in-the-loop probes); gate tests (send without approval, edited reply with invented amount → 422, 409 when not awaiting approval, repeat intake, double click); export validation |
 
 **Shared files** (`contracts.py`, `config.py`, `requirements.txt`) change only in a dedicated PR the other developer approves.
 
@@ -109,10 +109,11 @@ A carries the most points (matching = 75 of 100). After Checkpoint 2, B helps A 
 | Day 1 ~12:00 | First real end-to-end path: real extraction → ATM handler → stored case | A: ATM handler. B: extractor + pipeline + DB |
 | **Day 1 16:00 — Checkpoint 1** | 20 training complaints classified + matched | A: all matchers. B: runner with `--no-draft` |
 | Day 1 evening | Full pipeline with draft + self-check; first 750 test run | Both |
-| **Day 2 12:00 — Checkpoint 2** | Approval + write-back via API on 50 training complaints; score posted | B: workflow API. A: self-check on edits |
-| After Checkpoint 2 | Minimal React UI (intake, queues), then bonus | Both, split by role screen |
+| **Day 2 12:00 — Checkpoint 2** | Approval + write-back via the contract API on 50 training complaints; score posted; `api_check.py` passes; API reachable from another laptop | B: contract API. A: self-check on edits |
+| Day 2 12:00–15:00 | Accuracy and messy-text robustness; final 750 export; **15:00 freeze** of agent + API | Both |
+| Day 2 15:00–16:30 | Simple case/queue UI calling the same API, then bonus screens | Both, split by role screen |
 
-Until Checkpoint 2 the core can be demoed through FastAPI `/docs`; React starts afterwards.
+Until Checkpoint 2 the core can be demoed through FastAPI `/docs`. The UI can keep changing after 15:00; the agent and API cannot.
 
 ### GitHub workflow
 
@@ -130,7 +131,7 @@ Until Checkpoint 2 the core can be demoed through FastAPI `/docs`; React starts 
 ┌──────────────────────────────────────────────────────────────┐
 │                    AGENT PIPELINE (core)                      │
 │                                                              │
-│  1. Intake (API endpoint / watched folder)                  │
+│  1. Intake (POST /complaints; inbox/ optional)              │
 │  2. Understand (LLM, pluggable) — extract clues from text   │
 │  3. Match Transaction (Code, category handler) — 75 pts     │
 │  4. Apply Policy (Code, category handler) — outcome, refund │
@@ -141,8 +142,10 @@ Until Checkpoint 2 the core can be demoed through FastAPI `/docs`; React starts 
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
 │                    FASTAPI BACKEND                            │
-│  Auth │ Cases API │ Approval API │ Intake │ Outbound (sim)  │
-│  Metrics │ Chat (SSE, bonus) │ WebSocket (bonus)            │
+│  Contract API (docs/api.md, no auth): /complaints,          │
+│    /cases/{id}, /cases/{id}/actions, /health                │
+│  Bonus /api/*: auth │ queues │ two-tier │ audit │ metrics   │
+│  Outbound (simulated outbox) │ Chat + WebSocket (bonus)      │
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
@@ -163,6 +166,8 @@ Until Checkpoint 2 the core can be demoed through FastAPI `/docs`; React starts 
 ---
 
 ## Roles (3 roles, matching bonus_platform.md spec)
+
+**Bonus only.** For the main ranking, a typed `actor` name on `POST /cases/{id}/actions` is enough (README FAQ): no logins, no roles. Everything in this section is for the Best Ops Platform award.
 
 | Role | Sees | Can do | Approval limit |
 |---|---|---|---|
@@ -218,7 +223,7 @@ run_kind              autonomous / reprocess (send-back creates a new reprocess 
 category
 matched_txn_id
 outcome
-refund_amount_myr     stored as integer sen or Decimal, exported with 2 decimals
+refund_sen            integer sen; exported and served as a 2-decimal string ("550.00")
 priority
 reply_language
 route
@@ -231,7 +236,7 @@ match_status          confident / ambiguous / none
 evidence              JSON — evidence snapshot used
 rule_id               which policy rule fired
 calculation           JSON — e.g. requested 1500.00 − dispensed 950.00 = 550.00
-self_check            pass / flag + offending IDs/amounts
+self_check            passed / flagged (API values) + offending IDs/amounts in run_json
 redraft_count
 hold_reason           NULL / customer_not_found / ambiguous_match / no_match / category_revised /
                       self_check_failed / unknown_auth_method / llm_error
@@ -253,9 +258,17 @@ text
 autonomous_run_id     FK — the run exported to predictions.csv; never changes
 current_run_id        FK — latest run (after send-back)
 
--- Human final action (what actually happened)
-status                processing / failed / pending / escalated / approved /
-                      rejected / sent_back / investigating / sent / closed
+content_hash          sha256 of the six fields: same ID + same hash = same complaint (POST again → existing case);
+                      same ID + different hash → conflict (409), nothing changes
+
+-- Contract state (docs/api.md; what GET /cases/{id} serves)
+status                processing / done / error  (+ error text)
+case_state            auto_resolved / awaiting_approval / with_fraud_team / approved / rejected
+sent                  true once a reply reached the outbox
+human_action          NULL until a human acts; then {action, actor, reason, at, reply_text}
+
+-- Bonus platform state (added with the ops platform; never served in place of case_state)
+workflow_status       escalated / sent_back / investigating / closed
 final_outcome         NULL until human acts
 final_refund_myr      NULL until human acts
 final_reply_text      NULL until human acts
@@ -274,8 +287,8 @@ updated_at
 ```
 id                    PK auto-increment
 complaint_id          FK
-actor                 username (or "agent")
-action                ingest / agent_run / approve / edit / reject / send_back /
+actor                 typed name from the API (or "agent"); username once the bonus auth exists
+action                ingest / agent_run / approve / edit_approve / reject / send_back /
                       escalate / reassign / acknowledge / investigate /
                       record_outcome / second_tier_approve / second_tier_reject / send
 field                 which field changed (e.g. reply_text, outcome)
@@ -306,6 +319,8 @@ full_name
 role                  officer / fraud / manager
 approval_limit_myr    e.g. 5000.00 (NULL for manager = no limit)
 ```
+
+**Contract mapping:** route → state when the agent decides: `AUTO_RESOLVE` → `auto_resolved`, `sent = true`; `HUMAN_APPROVAL` → `awaiting_approval`, `sent = false`; `FRAUD_TEAM` → `with_fraud_team`, `sent = false` (the holding reply goes out when an analyst acknowledges; bonus). `approve` / `edit_approve` → `approved`, `sent = true`; `reject` → `rejected`, nothing sent. Already built in the case store (`backend/db/`, OpenSpec change `b-batch-runner`).
 
 **Integrity rule:** `agent_runs` rows never change. Human actions change `cases` and append `case_events`. `predictions.csv` is exported from `cases.autonomous_run_id` only — never from human-corrected fields or reprocess runs. The gap between agent run and final action is auditable and demo-worthy.
 
@@ -350,7 +365,7 @@ approval_limit_myr    e.g. 5000.00 (NULL for manager = no limit)
 - Exact schema: `Clues` in `backend/contracts.py` (unknown fields rejected). Dates accepted as DD-MM-YYYY or YYYY-MM-DD; all times MYT; costs in RM
 - Validate against a schema; malformed output → one retry → `hold_reason = llm_error`, visible as failed case
 - Complaint text is data, not instructions: wrap it in a delimited block; the output schema has no fields that can set outcome/refund/route
-- Few-shot examples from training data (EN + MS + mixed + call-centre note)
+- Few-shot examples from training data (EN + MS + mixed + call-centre note), **plus messy rewrites** (typos, SMS short forms like "sy x dpt duit", emoji, mixed language): the hidden test is written this way, and an agent tuned to `complaints.csv` wording will struggle. Build a small messy eval set by rewriting training complaints and score extraction on it
 - Date phrase stays as raw text — code resolves it next
 - Cache by hash of (complaint fields, provider, model, prompt_version, schema_version)
 
@@ -415,6 +430,7 @@ Policy answers "what should happen?" given the matched transaction and its evide
 **1.6 Reply Generator — LLM step (1 hr)**
 - Input: decision, calculation, matched transaction, reply_language, category guidance from the handler
 - Prompt enforces: professional bank tone, reference transaction if applicable, state decision clearly, no invented facts, correct language, concise
+- **A refund reply must state the refund amount** (organisers check this automatically on every reply); the self-check fails a REFUND reply that doesn't mention it
 - Controlled status wording: an AUTO_RESOLVE refund may say "has been refunded"; anything awaiting approval or investigation must not claim money has moved
 - FRAUD_TEAM cases get a **holding reply** (received, under investigation, next contact time) — not a resolution
 - Category guidance per handler for consistency
@@ -431,23 +447,41 @@ Policy answers "what should happen?" given the matched transaction and its evide
 - Async parallel processing with bounded concurrency and rate limiting
 - Cache LLM calls (don't re-call on retry); record tokens, cost, latency, retries per run
 - Write `submissions/<team>/predictions.csv` from DB autonomous runs
+- The batch runner and `POST /complaints` call the **same** agent function, so the live round tests the system that produced the leaderboard
 - Score against training labels with `--details`, analyze errors by category; prioritise wrongful refunds, missed fraud, then matching failures
 - **Target: Checkpoint 1 by 16:00 — 20 training complaints classified + matched**
 - **First full 750 test run as soon as matching is stable (Day 1 evening).** Re-run only changed complaints later; never leave the 750 run for the last hour
 
 ### Phase 2: FastAPI Backend + DB + Core Workflow (Day 1, 16:00–17:30 + Day 2, 09:00–10:00 → Checkpoint 2)
 
-Checkpoint 2 (Day 2 12:00) needs decision, reply, approval and write-back on 50 training complaints. All of that must work through the API before the UI is finished.
+Checkpoint 2 (Day 2 12:00) needs decision, reply, approval and write-back on 50 training complaints, `scoring/api_check.py` passing, and our API reachable from the organisers' laptop. All of that must work through the contract API before the UI is finished.
 
-**2.1 DB Schema + Auth**
-- SQLite: `agent_runs`, `cases`, `case_events`, `outbound_messages`, `users`, `llm_cache` (schema above)
-- Seed users:
+**2.1 The contract API (core, build first; [api.md](api.md))**
+- `POST /complaints`: body = the six complaint fields. Return `202` with `{"complaint_id", "status": "processing"}` and run the agent in the background (bounded worker pool; the hidden test posts 20 at once and allows 120 s each)
+  - Missing/empty `complaint_id`, `customer_id`, `received_at` or `text` → `400`/`422`, never `5xx`
+  - Same ID again → existing case's status (`200`), no second case, no new decision; same ID with different content → `409`
+  - Unknown `customer_id` → accept and flag the case (held, `customer_not_found`), never crash
+- `GET /cases/{id}`: `404` if unknown; `{"status": "processing"}` while working; when `done`, every field: the 8 decision fields (as in predictions.csv; `matched_txn_id` is `""` when none, `refund_amount_myr` a 2-decimal string), `self_check` (`passed`/`flagged`), `case_state`, `sent`, `human_action`. `status: error` carries an `error` field
+- `POST /cases/{id}/actions`: `{"action": "approve" | "reject" | "edit_approve", "actor", "reason", "reply_text"}`
+  - `404` unknown case; `409` unless `case_state = awaiting_approval`; `422` for a missing actor, an unknown action, a missing reason on reject/edit_approve, or an edited reply that fails the self-check (nothing is sent)
+  - `approve`/`edit_approve` → `approved`, `sent = true`, reply to the outbox; `reject` → `rejected`, nothing sent. `human_action` records action, actor, reason, time and the reply that went out. The agent's decision fields never change
+  - Our UI's Approve/Reject buttons call this same endpoint, so the demo and the live round use one path
+- `GET /health` → `200`
+- No credentials on these routes: the organisers' script sends none
+- **Serving:** `uvicorn backend.main:app --host 0.0.0.0 --port 8000` on the venue Wi-Fi, or an ngrok / Cloudflare tunnel. Running from 15:00 until our demo ends. One named person owns keeping it up; LLM keys stay on our side
+- Self-test: `python scoring/api_check.py http://localhost:8000` (add `--n 30` for more complaints)
+
+**2.2 DB Schema + Auth (auth is bonus)**
+- SQLite: `agent_runs`, `cases`, `case_events`, `outbound_messages` (built); `users`, `llm_cache` later (schema above)
+- Seed users (bonus):
   - `officer1` — Complaints Officer, approval_limit_myr = 5000
   - `fraud1` — Fraud Analyst, approval_limit_myr = 5000
   - `manager1` — Manager, no limit
-- Simple auth: seeded users + `role` column, JWT on login, role checks enforced **in the backend** on every case and action endpoint (hiding links is not enough)
+- Simple auth (bonus): seeded users + `role` column, JWT on login, role checks enforced **in the backend** on every `/api/*` route (hiding links is not enough). Never on the contract routes
 
-**2.2 Core API Endpoints**
+**2.3 Bonus platform endpoints (`/api/*`, authenticated)**
+
+These serve the role screens. They read the same case store and record the same `human_action` / `case_events`; first-tier approve and reject go through the same function as `POST /cases/{id}/actions`.
 - `POST /api/auth/login` — returns JWT with role
 - `GET /api/auth/me` — current user + role + approval_limit
 - `GET /api/cases` — list with filters (category, priority, status, route, hold_reason), sorted by priority then SLA due. **Role-filtered:** officer sees HUMAN_APPROVAL only, fraud sees FRAUD_TEAM only, manager sees all
@@ -468,17 +502,19 @@ Checkpoint 2 (Day 2 12:00) needs decision, reply, approval and write-back on 50 
 - `GET /api/metrics` — throughput, auto-resolve rate, SLA, override rate, self-check catches, cost and latency per complaint (manager only)
 - `GET /api/export/predictions` — writes and validates predictions.csv from autonomous runs
 
-**2.3 Intake + Write-back**
-- `POST /api/intake` — accepts one complaint row (same fields as live round) or a CSV; persists the case first, then runs the pipeline in the background; returns case ID for polling
-- Watched folder `inbox/` — dropped CSV files go through the same intake path
+**2.4 Intake + Write-back**
+- `POST /complaints` is the intake: persists the case first, then runs the pipeline in the background; clients poll `GET /cases/{id}`
+- Optional: watched folder `inbox/` and a CSV-paste form call the same intake function
 - Unknown `customer_id` is accepted and stored, never dropped: no transaction lookup, held with `customer_not_found` (HUMAN_APPROVAL, or FRAUD_TEAM if INVESTIGATE); same complaint ID + identical content returns the existing case; same ID + different content is rejected
 - AUTO_RESOLVE cases: self-check pass → outbound record (`authorised_by = auto`) → `sent` → `closed`
 - Every human-gated send goes through one backend function that checks: right role, approved (and second-tier approved if escalated), current reply passed self-check, not already sent. Protects against double clicks and retries
 - Pipeline or delivery failure leaves a visible `failed` state with retry
 
-### Phase 3: React Frontend (Day 2, 10:00–13:00)
+### Phase 3: Frontend (Day 2; the UI may keep changing until 16:30)
 
-Three distinct interfaces, not one generic queue.
+**Core minimum (for the main ranking and the human gate):** one page that shows the three queues (auto-resolved, awaiting approval, fraud team), one case (complaint, matched transaction, evidence, decision, reply, self-check result) and Approve / Edit & Approve / Reject buttons calling `POST /cases/{id}/actions`. A simple web page, Streamlit or Gradio is enough: judges score clarity, not polish (README FAQ). Build this before the role screens.
+
+**Bonus: three distinct interfaces, not one generic queue.**
 
 **3.1 Foundation**
 - Vite + TypeScript + TailwindCSS + shadcn/ui
@@ -523,11 +559,10 @@ Only role that sees everything.
 - **Audit log:** append-only, expandable rows, diffs for edits, export button
 - **Agent vs human:** autonomous run beside final action for every overridden case
 
-**3.6 Intake Form** *(all roles, critical for live round)*
-- Input: complaint_id, customer_id (with search/autocomplete), received_at, channel dropdown, subject, text — or paste one CSV row
-- Accepts same CSV format as live round
-- POST triggers pipeline → shows processing state → result appears in correct queue
-- No code changes needed to accept live-round complaints
+**3.6 Intake Form** *(optional; the live round posts to the API directly)*
+- Input: complaint_id, customer_id, received_at, channel, subject, text, or paste one JSON/CSV row
+- Calls `POST /complaints` → shows processing state → result appears in the correct queue
+- Useful for rehearsing; judges' complaints arrive through the API and must appear in the UI on their own
 
 ### Phase 4: Bonus Extras (Day 2, after core UI works)
 
@@ -545,7 +580,9 @@ Only once Phase 3 passes the three-case demo. Each extra has a fallback so the c
 
 **4.4 SLA timers + notifications** — live countdown bars and new-case alerts per role
 
-### Phase 5: Integration + Submission (Day 2, 13:00–15:00)
+### Phase 5: Integration + Submission (Day 2, 13:00–15:00, then demo at 16:30)
+
+- Run `scoring/api_check.py` against the served URL (from another laptop on the same network if possible); fix contract or probe failures first
 
 - Re-run changed test complaints; export predictions.csv from autonomous runs
 - Validate export: exactly 750 unique test IDs, correct header, valid enums, two-decimal amounts, non-empty replies. Missing or failed predictions are surfaced, never filled with invented answers
@@ -554,9 +591,11 @@ Only once Phase 3 passes the three-case demo. Each extra has a fallback so the c
   1. HUMAN_APPROVAL within limit → officer approves (or edits, triggering self-check) → sent
   2. HUMAN_APPROVAL over limit → officer escalates → manager approves → sent
   3. FRAUD_TEAM → analyst acknowledges → holding reply sent → investigation logged
-- Live round rehearsal: paste CSV complaint and drop one in `inbox/` → watch it flow through
+- Live round rehearsal: post `examples/live_complaint_example.json` and a few messy rewrites to the running API; watch each case appear in the UI on its own; approve one through the UI
 - Show audit log + agent-vs-human gap across all three
-- Code freeze 15:00, PR from fork
+- **15:00 freeze** of agent + API: PR from fork with predictions.csv, **freeze commit hash** and **API URL** in the description
+- Keep the API running and reachable 15:00 → end of our demo (hidden test 15:00–15:45); don't redeploy the agent after the freeze
+- 15:00–16:30: UI and bonus work only
 
 ---
 
@@ -694,7 +733,8 @@ backend/
 │   ├── jwt.py                 # Token create/verify
 │   └── dependencies.py        # get_current_user, require_role
 ├── api/
-│   ├── cases.py               # Role-filtered CRUD + actions
+│   ├── contract.py            # docs/api.md: /complaints, /cases/{id}, /cases/{id}/actions, /health (no auth)
+│   ├── cases.py               # Bonus: role-filtered /api/* CRUD + actions
 │   ├── intake.py              # POST new complaint → pipeline
 │   ├── watcher.py             # inbox/ folder watcher → same intake path
 │   ├── outbound.py            # Gated simulated send
@@ -773,18 +813,20 @@ frontend/
 - **Gates:** approve over limit fails; officer calling a fraud endpoint fails; direct API send without approval fails; edited reply with invented TXN-ID/amount blocked; edit after approval clears approval; escalated case can't be sent on first-tier action; fraud holding reply not sent before acknowledge
 - **Robustness:** repeat intake returns same case; conflicting content rejected; double-click approve sends once; restart mid-batch resumes; LLM error leaves a visible failed case
 - **Export:** autonomous run only; human edits never leak into predictions.csv
+- **Contract (`api_check.py` probes):** `/health` 200; unknown case 404; missing text 4xx; unknown customer no 5xx; same complaint twice → no change, no duplicate; awaiting-approval case shows `sent: false`; edited reply with an invented amount → 422 and nothing sent; approve → `approved`, `sent: true`, actor recorded, decision unchanged; 20 concurrent complaints all `done` within 120 s
+- **Messy text:** extraction and end-to-end score on rewritten training complaints (typos, SMS short forms, emoji, mixed language)
 
 ---
 
-## Demo Script (8 minutes including live round)
+## Demo Script (about 10 minutes, from 16:30)
 
 **1. Show the system (1 min)**
 - Architecture overview (LLM does language, code does money), three role logins
 
-**2. Live round — judges type complaints (3 min)**
-- Judge provides CSV complaint → paste into intake form (or drop into `inbox/`)
-- Watch pipeline process on its own
-- Case appears in correct queue (HUMAN_APPROVAL or FRAUD_TEAM) with evidence, calculation and checked reply
+**2. Human gate: judges send 3 complaints through our API (4 min, 10 points)**
+- Each case appears in the UI on its own; show the matched transaction, evidence, decision, route, reply and self-check result
+- A case needing approval waits (`case_state: awaiting_approval`, `sent: false`) until someone approves it in our UI
+- A fraud case lands in the fraud queue
 
 **3. Drive three cases end-to-end (3 min)**
 - **Case A:** HUMAN_APPROVAL, refund RM550 (> RM500 so routed to HUMAN_APPROVAL, within officer's RM5,000 limit) → officer approves → "sent (simulated)"
@@ -810,6 +852,9 @@ frontend/
 | Prompt injection in complaint text | Text treated as data; LLM output can't set outcome/refund/route |
 | Time crunch | Pipeline is Day 1 priority. Bonus extras only after core UI works |
 | Demo fails | Pre-process all test complaints, cached fallback, rehearse live intake |
+| Organisers can't reach our API | Test from a second laptop at Checkpoint 2; tunnel as a backup; one owner keeps it running from 15:00 |
+| Hidden test is messier than training | Messy few-shots and a rewritten eval set; matching and policy stay in code |
+| 20 concurrent complaints exceed 120 s | Bounded worker pool, LLM cache, timeouts with one retry; measure with `api_check.py` |
 | Scoring edge cases | Run scorer after every change, analyze wrongs |
 | Frontend not ready | Pipeline + batch runner + API still deliver leaderboard and Checkpoint 2 |
 | Secrets leak (public repo) | Keys only in env vars; `.env` gitignored |
@@ -824,7 +869,9 @@ frontend/
 | Critical error rate | <1% | — |
 | Speed per complaint | <10 seconds | — |
 | Cost per complaint | Measured and shown on dashboard | — |
-| Live round | All cases classified + routed correctly, approval waits | — |
+| Live round: hidden test | 20/20 `done` within 120 s; score close to training score | — |
+| Live round: human gate | All checklist items pass on 3 complaints | — |
+| `api_check.py` probes | All pass | — |
 | Self-check | 100% replies verified | — |
 | Reply quality | Professional tone, correct language, no hallucination | — |
 | Bonus: 3-case demo | All three flows work end-to-end | — |
@@ -839,3 +886,4 @@ frontend/
 | Fraud analyst approval limit — measured on what amount? | Disputed transaction amount |
 | UNAUTHORISED_CARD with Contactless or other auth methods | INVESTIGATE, held, never refund |
 | SLA "business days" — weekends/public holidays? | Mon–Fri, no holidays |
+| `with_fraud_team`: should a holding reply go out automatically (`sent` may be either)? | No automatic holding reply in the core: `sent = false` (as the case store does); the bonus fraud workbench sends it on acknowledge |
