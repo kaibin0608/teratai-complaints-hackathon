@@ -32,8 +32,11 @@ ENGLISH_MONTHS: dict[str, int] = {
 }
 ALL_MONTHS = {**MALAY_MONTHS, **ENGLISH_MONTHS}
 
-YESTERDAY = {"yesterday", "semalam", "kelmarin"}
-LAST_WEEK = {"last week", "minggu lepas", "minggu lalu"}
+YESTERDAY = {"yesterday", "ytd", "semalam", "smlm", "semlm"}
+KELMARIN = {"kelmarin", "kemarin"}  # usually the day before yesterday, sometimes yesterday: cover both
+# "last week": in the data the transaction is 5-12 days before received_at; 2-14 covers that and the calendar reading
+LAST_WEEK = {"last week", "last wk", "minggu lepas", "minggu lalu", "minggu lps", "mgg lepas", "mgg lps"}
+LAST_WEEK_DAYS = (2, 14)
 LAST_MONTH = {"last month", "bulan lepas", "bulan lalu"}
 TODAY = {"today", "hari ini", "tadi"}
 THIS_WEEK = {"this week", "minggu ini"}
@@ -89,14 +92,16 @@ def resolve_date(
         day = received_date - dt.timedelta(days=1)
         return (day, day)
 
+    if phrase in KELMARIN:
+        return (received_date - dt.timedelta(days=2), received_date - dt.timedelta(days=1))
+
     if phrase in THIS_WEEK:
         start = received_date - dt.timedelta(days=received_date.weekday())
         return (start, received_date)
 
     if phrase in LAST_WEEK:
-        end = received_date - dt.timedelta(days=1)
-        start = end - dt.timedelta(days=6)
-        return (start, end)
+        nearest, furthest = LAST_WEEK_DAYS
+        return (received_date - dt.timedelta(days=furthest), received_date - dt.timedelta(days=nearest))
 
     if phrase in LAST_MONTH:
         return _prev_calendar_month(received_date)

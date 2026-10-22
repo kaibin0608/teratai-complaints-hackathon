@@ -153,6 +153,35 @@ The hidden test sends 20 complaints "written the way real customers write: typos
 - **Speed:** 42 fresh complaints with 8 in flight queue up (median 33.7 s). The hidden test sends 20, so expect roughly half that, inside the 120 s limit. To go faster: a higher `LLM_MAX_CONCURRENCY` for the server, and/or lower extraction reasoning (needs re-validating accuracy).
   **Decision (Dev B, 2026-10-22):** keep `LLM_MAX_CONCURRENCY = 8`. The speed is acceptable for 20 at once, and 20 simultaneous requests risk provider rate limits (HTTP 429). Revisit only if the hidden-test timing becomes a problem.
 
+## Engine fixes (Dev A's files, found by these runs)
+
+Measured on all 1,750 training complaints with the same cached DeepSeek clues and code replies, so the runs are free and the only difference is the engine (`runner --ids train --no-draft --db <experiment db>` + `submit --ids train --score`):
+
+| | Before | After |
+|---|---|---|
+| **Final score** | 99.08 | **99.94** |
+| matched_txn_id / outcome / refund | 98.9% each | **100%** each |
+| route (not scored, judged in the live round) | 92.2% | **99.8%** |
+| `ambiguous_match` holds | 185 | **7** |
+| Critical errors | 0 | 0 |
+| Messy set via the API | 99.4, route ok 37/42 | 99.4, route ok **42/42**, 9/9 probes |
+
+What changed, and why:
+1. **"last week" → 2–14 days back** (`date_resolver.py`). In the labels the transaction is always 5–12 days before `received_at` (66 complaints), and the old window (the 7 days before) missed 45. This caused 20 of the 21 wrong transactions. Example: CMP-01618 "RM3,693.71 at QUICKBUY last week" had matched a RM16.91 contactless payment and was held as `unknown_auth_method`; it now matches the right charge.
+2. **"kelmarin" → 1–2 days back** (it usually means the day before yesterday, sometimes yesterday; 0 uses in training, so no score effect). Also SMS short forms for the hidden test's style: "ytd", "smlm", "last wk", "mgg lps", "minggu lps". Previously these fell to the full 45-day window.
+3. **Recipient / merchant / ATM-location names scored against `merchant_or_counterparty`** (fallback `description`) in `failed_transfer.py`, `scam.py`, `unauthorised.py` and `atm.py`. They had been scored against the memo field ("Makan", "Transfer", "ATM-JOH-01"), so the name never counted. `duplicate.py` already did this.
+4. **A tied duplicate pair is confident** (`duplicate.py`). Both charges of a real duplicate score the same, so the generic picker called every duplicate ambiguous and held it for a human (route HUMAN_APPROVAL instead of AUTO_RESOLVE). When the top two tie and are each other's pair (`_find_pair`), the later charge (the one policy refunds) is picked as confident.
+5. **Unknown customer → `customer_not_found` wins over `no_match`** (`router.py`), since it's the root cause. The `xfail(strict)` smoke test now passes as a normal test.
+
+Not changed: **the ±10% approximate-amount band.** 10 of 248 "about" amounts are 10–23% off (e.g. "about RM100" for RM123.25), but date and name still found every one, and matching is now 100%. Widening it can only add mix-ups.
+
+**Submission regenerated with the fixed engine** (`runner --ids test --rerun`, then `submit --ids test`): 750/750 valid, 0 fallbacks, all replies pass the checks, RM0.08 (only changed decisions were redrafted). Against the previous file:
+- route changed on 64 rows (AUTO_RESOLVE 249 → 313: duplicates no longer held); `ambiguous_match` holds 82 → 3
+- **6 rows changed transaction, all "last week" / "minggu lepas" complaints.** Each new match has the exact amount and name the customer gave; each old one was a different, nearby transaction (e.g. CMP-01249 "RM2351.24 kepada Yap Boon Hock" had matched RM225.73 to someone else)
+- 4 of the 6 go DECLINE → REFUND: three failed transfers with no reversal, and one ATM shortfall, all refundable under policy. They were checked by hand, since a wrongful refund is a critical error.
+
+Dev A's own tests asserted the old behaviour ("kelmarin" = yesterday; "last week" = the 7 days before). Those two were updated with the data behind the change. `backend/tests/test_engine_fixes.py` adds 18 regression tests; all fail on the old code.
+
 ## How to reproduce
 
 Needs `OPENROUTER_API_KEY` in `.env`. LLM responses are cached in `backend/.cache/llm_cache.db`, so a rerun with the same prompt and model costs nothing.

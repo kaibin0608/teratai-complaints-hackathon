@@ -29,9 +29,7 @@ def test_live_round_row_parses_malaysian_and_iso_dates(received):
 
 @pytest.mark.parametrize("text, route", [
     ("I waited two hours at the branch.", "HUMAN_APPROVAL"),
-    pytest.param("A police officer told me to move my money to a safe account.", "FRAUD_TEAM",
-                 marks=pytest.mark.xfail(strict=True, reason="engine sets no_match before customer_not_found "
-                                                             "(Engine contract; reported to Dev A)")),
+    ("A police officer told me to move my money to a safe account.", "FRAUD_TEAM"),
 ])
 def test_unknown_customer_is_held_not_dropped(text, route):
     c = Complaint(complaint_id="LIVE-99", customer_id="CUS-99999", received_at="30-09-2026 10:15:00",

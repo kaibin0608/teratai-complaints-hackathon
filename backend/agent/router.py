@@ -77,8 +77,8 @@ def finalize_decision(decision: Decision, complaint: Complaint, clues: Clues) ->
         updated = hold(updated, updated.hold_reason)
 
     customer = get_customer(complaint.customer_id)
-    if customer is None:
-        updated = hold(updated, "customer_not_found")
+    if customer is None:  # the root cause of any no_match, so it replaces that reason
+        updated = hold(updated.model_copy(update={"hold_reason": None}), "customer_not_found")
 
     return updated
 
