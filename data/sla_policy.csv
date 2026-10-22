@@ -1,0 +1,4 @@
+priority,acknowledge_within_hours,resolve_within_business_days
+P1,2,3
+P2,24,7
+P3,48,14

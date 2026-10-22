@@ -1,0 +1,8 @@
+parameter,value,meaning
+AUTO_REFUND_LIMIT_MYR,500.00,Refunds above this need human approval; refunds at or below it can be auto-resolved
+VULNERABLE_AGE,65,"Customers this age or older on the day the complaint arrives move one priority level up (P3 to P2, P2 to P1)"
+DEBIT_FEE_WAIVER_AGE,60,The debit card annual fee is waived for customers this age or older on the charge date
+DUPLICATE_WINDOW_MINUTES,10,Two identical card charges this close together count as a duplicate
+MATCH_WINDOW_DAYS,45,Complaints refer to transactions from the 45 days before the complaint arrived
+ROUTING,see meaning,INVESTIGATE goes to FRAUD_TEAM. DECLINE goes to HUMAN_APPROVAL. REFUND above AUTO_REFUND_LIMIT_MYR goes to HUMAN_APPROVAL. Everything else is AUTO_RESOLVE
+REPLY_LANGUAGE,see meaning,"Reply in the language the complaint is written in (EN or MS). If it mixes both, or it is a call-centre note written by staff, use the customer's preferred_language"

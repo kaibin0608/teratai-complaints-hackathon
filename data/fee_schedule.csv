@@ -1,0 +1,7 @@
+fee_code,fee_name,product,amount_myr,waiver_rule
+MSC_BASIC,Monthly service charge,Basic Savings,0.00,Not chargeable: Basic Savings has no monthly service charge
+MSC_SAVPLUS,Monthly service charge,Savings Plus,2.00,None
+MSC_CURRENT,Monthly service charge,Current Account,10.00,None
+DEBIT_ANNUAL,Debit card annual fee,Basic Savings; Savings Plus (debit card on the account),12.00,Waived for customers aged 60 or above on the charge date
+CC_ANNUAL_CLASSIC,Credit card annual fee,Credit Card Classic,150.00,Waived in the first year: not chargeable before the first anniversary of the account open date
+CC_ANNUAL_PLATINUM,Credit card annual fee,Credit Card Platinum,250.00,Waived in the first year: not chargeable before the first anniversary of the account open date
