@@ -2,8 +2,11 @@
 
 For whoever builds the React UI. It covers everything the screens need from the backend: how to run it locally, which endpoint feeds which screen, the exact JSON, and TypeScript types to copy.
 
-- **Read data** with the `/api/*` routes in this guide. There's no login yet. When the bonus login arrives, the same routes will take a token, and this guide will say so in the [changelog](#changelog).
-- **Change data** (Approve, Edit & approve, Reject, Acknowledge) with the organisers' contract routes in [api.md](api.md). They're summarised [below](#buttons-actions).
+- **Read data** with the `/api/*` routes in this guide.
+- **Change data** in one of two ways:
+  - **Core UI, no login:** the organisers' contract routes ([api.md](api.md)), summarised [below](#buttons-actions).
+  - **Role screens, with login:** the platform actions ([Login, roles and the platform actions](#login-roles-and-the-platform-actions)).
+- **Login is optional for reads** until the setting `AUTH_REQUIRED` is turned on. With no token you get the manager's view (everything). With a token, lists are filtered to your role.
 - Interactive docs: start the server and open **http://localhost:8000/docs**. You can try every route there.
 
 ## Run the backend locally (free, no API key)
@@ -62,12 +65,15 @@ Display dates as `DD-MM-YYYY HH:MM`, as the bank does. The raw evidence rows (`e
 |---|---|
 | Queue tabs with counts (Auto-resolved, Awaiting approval, Fraud team, Approved, Rejected, Processing, Error) | `GET /api/cases?queue=...`, using `counts` for the tab badges |
 | Case page (complaint, matched transaction, evidence, decision, reply, self-check, audit trail) | `GET /api/cases/{id}` |
-| Approve / Edit & approve / Reject buttons | `POST /cases/{id}/actions` |
-| Fraud "Acknowledge" (sends the holding reply) | `POST /cases/{id}/acknowledge` |
+| Approve / Edit & approve / Reject buttons (core, no login) | `POST /cases/{id}/actions` |
+| Fraud "Acknowledge" (core, no login) | `POST /cases/{id}/acknowledge` |
 | Manager dashboard tiles | `GET /api/metrics?as_of=...` |
 | Audit log page | `GET /api/audit` |
+| **Bonus:** login page | `POST /api/auth/login`, then `GET /api/auth/me` |
+| **Bonus:** role screens' buttons (limits, escalate, second tier, send back, fraud steps) | `POST /api/cases/{id}/<action>` with the token ([below](#login-roles-and-the-platform-actions)) |
+| **Bonus:** manager's escalation queue / reassign menu | `GET /api/cases?workflow=escalated` / `GET /api/users` |
 
-**Polling:** poll the list every 3–5 s. A new complaint appears with `queue: "processing"` and moves to its queue a few seconds later (`sort=recent` shows it first). Poll a case page every 2 s only while its `case.queue` is `processing`.
+**Polling:** poll the list every 3–5 s. A new complaint appears with `queue: "processing"` and moves to its queue a few seconds later (`sort=recent` shows it first). Poll a case page every 2 s only while its `case.queue` is `processing`, or its `case.workflow` is `reprocessing` (after a send back).
 
 ---
 
@@ -221,7 +227,11 @@ With real models, `usage` shows `openrouter` models, real token counts and costs
 
 ## Buttons (actions)
 
-These are the contract routes in [api.md](api.md). They return the contract's short case view; re-fetch `GET /api/cases/{id}` afterwards to redraw the page. `actor` is the name the person types, since there's no login yet. Make it a text box, or remember it in the browser.
+These are the contract routes in [api.md](api.md), for the **core UI without login**. Once your login page exists, use the [platform actions](#login-roles-and-the-platform-actions) instead: they apply limits and roles, and take the person from the token.
+
+They return the contract's short case view; re-fetch `GET /api/cases/{id}` afterwards to redraw the page. `actor` is the name the person types. Make it a text box, or remember it in the browser.
+
+The contract routes refuse (409) a case that is escalated, being re-run, or closed on the platform.
 
 | Queue (`case.queue`) | Buttons | Request |
 |---|---|---|
@@ -367,16 +377,37 @@ export interface CaseListItem {
   vulnerable: boolean | null;
   resolve_due_at: IsoTime | null;
   waiting_reason: string | null;     // null for closed cases
-  human_action: { action: string; actor: string; at: string } | null;
+  human_action: { action: string; actor: string; at: IsoTime } | null;
   updated_at: IsoTime;
+  // bonus platform
+  workflow: Workflow | null;
+  sensitive: boolean;
+  sensitive_reason: string | null;   // "Customer aged 65+" or the reason someone gave when flagging
+  assigned_to: string | null;
+  escalation: Escalation | null;
+  overridden: boolean;               // people changed the agent's decision or reply
 }
 
 export interface CaseList {
   total: number;
   limit: number;
   offset: number;
-  counts: Record<Queue, number>;     // over all cases, ignoring filters
+  counts: Record<Queue, number>;     // over all the cases you can see, ignoring filters
+  workflow_counts: Record<Workflow, number>;
   items: CaseListItem[];
+}
+
+export type Workflow = "escalated" | "reprocessing" | "investigating" | "closed";
+export type Role = "officer" | "fraud" | "manager";
+export type FraudOutcome = "confirmed_fraud" | "not_fraud" | "recall_succeeded" | "recall_failed";
+
+export interface User { username: string; full_name: string; role: Role; approval_limit_myr: Money | null }
+export interface Login { token: string; user: User }
+
+export interface Escalation {
+  by: string; at: IsoTime; reason: string;
+  proposal: { action: "approve"; reply_text: string; edited: boolean; self_check: "passed" | "flagged" }
+          | { action: "record_outcome"; outcome: FraudOutcome };
 }
 
 export interface Candidate { txn_id: string; score: number; reasons: string[] }
@@ -405,11 +436,16 @@ export interface CaseDetail {
     sent: boolean;
     error: string | null;
     waiting_reason: string | null;
-    human_action: { action: string; actor: string; reason: string; at: string; reply_text: string | null } | null;
+    human_action: { action: string; actor: string; reason: string; at: IsoTime; reply_text: string | null } | null;
     autonomous_run_id: string | null;
-    current_run_id: string | null;
+    current_run_id: string | null;   // differs from autonomous_run_id after a send back
     created_at: IsoTime;
     updated_at: IsoTime;
+    workflow: Workflow | null;
+    sensitive: boolean;
+    sensitive_reason: string | null;
+    assigned_to: string | null;
+    escalation: Escalation | null;
   };
   complaint: { customer_id: string; received_at: IsoTime; channel: string; subject: string; text: string };
   // null while processing, after an error, or (customer) when the customer is unknown:
@@ -444,6 +480,14 @@ export interface CaseDetail {
   events: AuditEvent[];                // oldest first
   outbound: { kind: "resolution" | "holding_reply"; reply_text: string; refund_amount_myr: Money;
               authorised_by: string; status: string; created_at: IsoTime }[];
+  // bonus platform
+  draft_reply: { text: string; self_check: "passed" | "flagged"; problems: string[]; by: string; at: IsoTime } | null;
+  fraud_outcome: { outcome: FraudOutcome; by: string; at: IsoTime; reason: string; proposed_by?: string } | null;
+  autonomous: { outcome: Outcome; refund_amount_myr: Money; route: Route; matched_txn_id: string | null;
+                reply_text: string } | null;      // the agent's own decision, never changed
+  final: { action: string; by: string; at: IsoTime; outcome: Outcome | "REJECTED" | FraudOutcome | null;
+           refund_amount_myr: Money; reply_text: string | null; sent: boolean } | null;  // null until a person acts
+  differs: { decision: boolean; refund: boolean; reply: boolean };
 }
 
 type Stats<T> = { mean: T | null; p50: T | null; p95: T | null; max: T | null };
@@ -451,13 +495,18 @@ type Stats<T> = { mean: T | null; p50: T | null; p95: T | null; max: T | null };
 export interface Metrics {
   cases: { total: number; by_queue: Record<Queue, number>; by_route: Record<Route, number>;
            by_category: Record<Category, number>; by_priority: Record<Priority, number>;
-           by_outcome: Record<Outcome, number> };
+           by_outcome: Record<Outcome, number>; by_channel: Record<string, number>;
+           by_language: Record<"EN" | "MS", number>; by_workflow: Record<Workflow, number> };
   auto_resolve_rate: number | null;
   holds: { total: number; by_reason: Record<HoldReason, number> };
   self_check: { first_draft_failed: number; held_self_check_failed: number; human_edits_refused: number };
   human: { approved: number; rejected: number; edited_and_approved: number; acknowledged: number;
            override_rate: number | null };
-  sla: { as_of: IsoTime; open: number; overdue: number; due_within_24h: number };
+  sla: { as_of: IsoTime; open: number; overdue: number; due_within_24h: number;
+         compliance: number | null; closed: number };
+  turnaround_minutes: { mean: number | null; p50: number | null; p95: number | null };
+  trends: { received_by_day: { date: string; total: number; by_category: Record<Category, number> }[] };
+  refunds_myr: { auto_paid: Money; approved_paid: Money; awaiting: Money; rejected: Money };
   cost_myr: { total: Cost } & Stats<Cost>;
   latency_ms: Stats<number>;
   models: { extract: Record<string, number>; draft: Record<string, number> };
@@ -476,22 +525,180 @@ A minimal fetch helper:
 ```ts
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
+let token: string | null = null;     // set after login (keep it in sessionStorage if you like)
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(`${API}${path}`, { headers: { "content-type": "application/json" }, ...init });
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (token) headers.authorization = `Bearer ${token}`;
+  const r = await fetch(`${API}${path}`, { ...init, headers });
+  if (r.status === 401 && token) { token = null; /* back to the login page */ }
   if (!r.ok) throw Object.assign(new Error(`${r.status}`), { status: r.status, body: await r.json() });
   return r.json();
 }
 
+// const { token: t, user } = await api<Login>("/api/auth/login",
+//     { method: "POST", body: JSON.stringify({ username: "officer1", password: "teratai123" }) });
+// token = t;
 // api<CaseList>("/api/cases?queue=awaiting_approval")
-// api("/cases/CMP-00244/actions", { method: "POST", body: JSON.stringify({ action: "approve", actor: "Aina" }) })
+// api<CaseDetail>("/api/cases/CMP-00244/approve", { method: "POST", body: JSON.stringify({ reason: "checked" }) })
 ```
 
 CORS is open, so the UI can run on any address (`localhost:5173`, or a laptop on the venue Wi-Fi). Point `VITE_API_URL` at the machine running the backend. On Windows, use `http://127.0.0.1:8000` rather than `localhost` for local work: `localhost` tries IPv6 first and can add about 0.2 s to every call.
 
-## Not there yet (bonus, later)
+## Login, roles and the platform actions
 
-Login and roles (officer, fraud analyst, manager), role-filtered queues, escalate, second-tier approval, reassign, send back, the fraud investigate and record-outcome actions, live push. The read routes above won't change shape when these arrive; new fields are only added.
+This is the bonus "ops platform". You build it on top of the core screens, and nothing in the core breaks. Until your login page is ready, keep the setting `AUTH_REQUIRED` off (the default). Read routes then work without a token, as before.
+
+### Users and login
+
+There are four demo users, and all of them use the password `teratai123`:
+
+| Username | Name | Role | Approval limit | Sees |
+|---|---|---|---|---|
+| `officer1` | Aina Rahman | officer | RM2,000 (on the refund) | approval cases |
+| `officer2` | Daniel Lim | officer | RM2,000 | approval cases |
+| `fraud1` | Farid Hassan | fraud | RM5,000 (on the disputed transaction) | fraud cases |
+| `manager1` | Mei Ling Tan | manager | none | everything, plus metrics, audit and users |
+
+```
+POST /api/auth/login   {"username": "officer1", "password": "teratai123"}
+→ {"token": "eyJhbGciOiJIUzI1NiIsInR5...",
+   "user": {"username": "officer1", "full_name": "Aina Rahman", "role": "officer", "approval_limit_myr": "2000.00"}}
+```
+
+- Send the token on every `/api` call: `Authorization: Bearer <token>`. It lasts 12 hours.
+- `GET /api/auth/me` returns the `user`. Use it after a page reload.
+- **401** means the token is missing, expired or invalid: go to the login page. A wrong username or password gets `401 {"detail": "wrong username or password"}`.
+- `GET /api/users` lists the users, without passwords, for the manager's reassign menu.
+
+**What a token changes:**
+
+| | Officer | Fraud analyst | Manager / no token (open mode) |
+|---|---|---|---|
+| `GET /api/cases`, `counts`, `workflow_counts` | approval cases only | fraud cases only | everything |
+| `GET /api/cases/{id}` of another team's case | 404 | 404 | ✓ |
+| `GET /api/metrics`, `/api/audit`, `/api/users` | 403 | 403 | ✓ |
+
+Auto-resolved, processing and error cases belong to no team, so only the manager sees them.
+
+With `AUTH_REQUIRED=true` (in the backend's `.env`), a request with no token gets 401. Turn it on for the demo, to show role separation. The organisers' contract routes never need a token.
+
+### The actions
+
+`POST /api/cases/{id}/<action>`. These **always need a token**: the person acting comes from it. Every one returns the **full case detail** (the same as `GET /api/cases/{id}`), so redraw the page from the response.
+
+| Action | Who | Body | Allowed when | Effect |
+|---|---|---|---|---|
+| `approve` | officer, manager | `{reason?}` | awaiting approval, no workflow | sends the reply (the edited draft if there is one) and the refund |
+| `reject` | officer, manager | `{reason}` | awaiting approval, no workflow | rejected; nothing is sent |
+| `edit-reply` | officer, manager (also while escalated) | `{reply_text, reason}` | awaiting approval | saves `draft_reply` with its self-check result; **approve stays locked while it's flagged** |
+| `send-back` | officer, manager | `{note}` | awaiting approval, no workflow | **202**: the agent re-runs with the note added to the complaint; `workflow` is `reprocessing` meanwhile |
+| `escalate` | officer, fraud analyst | `{reason}`; fraud also `{outcome}` | approval: awaiting approval. Fraud: investigating | `workflow: escalated`; the case waits for the manager |
+| `flag-sensitive` | first tier, manager | `{reason}` | open cases | the case now needs the manager |
+| `second-tier-approve` | manager | `{reason}` | escalated | approval case: sent, `workflow: closed`. Fraud case: the proposed outcome is recorded, `closed` |
+| `second-tier-reject` | manager | `{reason}` | escalated | approval case: rejected, `closed`. Fraud case: back to `investigating` |
+| `reassign` | manager | `{username, reason?}` | any | `assigned_to`. Only that person (or the manager) can then act on it |
+| `acknowledge` | fraud analyst, manager | `{reason?}` | fraud, not yet sent | sends the holding reply; `workflow: investigating` |
+| `investigate` | fraud analyst, manager | `{note, kind}`, where `kind` is `investigation` or `recall_attempt` | investigating | adds a timeline entry |
+| `record-outcome` | fraud analyst, manager | `{outcome, reason}`, where `outcome` is `confirmed_fraud`, `not_fraud`, `recall_succeeded` or `recall_failed` | investigating | `fraud_outcome`, `workflow: closed`. No message to the customer |
+
+**The rules your screens should show:**
+- **Limit and sensitivity.** An officer can't approve a refund over their limit, or a **sensitive** case (the customer is 65 or older, or someone flagged it). A fraud analyst can't record an outcome when the disputed transaction is over RM5,000, or the case is sensitive. You can tell beforehand: compare `decision.refund_amount_myr` (or `evidence.matched_txn.amount_myr` for fraud) with `user.approval_limit_myr`, and check `case.sensitive`. Then **show "Escalate to manager" instead of "Approve"**. If you call it anyway:
+
+  ```json
+  403 {"detail": {"error": "escalate to a manager", "why": "refund RM2,788.60 is over your limit RM2,000.00",
+                  "limit": "2000.00", "amount": "2788.60"}}
+  ```
+- **Escalated cases wait.** `workflow: "escalated"` and `waiting_reason: "Escalated to the manager"`. Only the manager can decide them. The manager's escalation queue is `GET /api/cases?workflow=escalated`, which covers both teams. Each case carries `escalation` (who, when, why, and the proposal):
+
+  ```json
+  "escalation": {"by": "officer1", "at": "2026-10-23T06:51:09", "reason": "over my limit",
+                 "proposal": {"action": "approve", "reply_text": "Yang dihormati Nur Rohani binti Ibrahim, ...",
+                              "edited": false, "self_check": "passed"}}
+  ```
+- **Edits are checked.** `edit-reply` saves the text even when it fails, and the detail's `draft_reply` shows the result. Show the problems next to the textarea. While the draft is `flagged`, approve returns:
+
+  ```json
+  422 {"detail": {"error": "the reply fails the self-check; nothing was sent",
+                  "problems": ["transaction TXN-0000001 is not in the evidence", "amount RM999.00 is not in the evidence",
+                               "the reply does not state the refund amount RM550.00"]}}
+  ```
+- **Send back** returns 202 with `workflow: "reprocessing"`. Poll the case every 2 s until `workflow` is null. The case then has a second run (`runs[1].run_kind = "reprocess"`), and the page shows the agent's new decision. A re-run case never goes out on its own; it always waits for a person.
+- **Fraud cases** go acknowledge → investigate (any number of times) → record outcome. The `events` give the timeline.
+- **Errors:**
+  - `403`: not your team, assigned to someone else, or over the limit
+  - `409`: the case has moved on (double click, someone else acted, or it's escalated or re-running). Re-fetch it.
+  - `422`: a missing reason or note, or a bad outcome
+- **The contract routes** (`POST /cases/{id}/actions` and `/acknowledge`) keep working without a login, but they refuse (409) any case that is escalated, being re-run, or closed on the platform. That way the two-tier rule can't be bypassed.
+
+### New fields
+
+**On every list item and the detail's `case`:**
+- `workflow`: null, `escalated`, `reprocessing`, `investigating` or `closed`
+- `sensitive` and `sensitive_reason`
+- `assigned_to`
+- `escalation`
+- `overridden` (list items only: people changed the agent's decision or reply)
+
+**New list filters:**
+- `workflow=escalated` (or `none`, or a comma list)
+- `sensitive=true`
+- `assigned_to=me`, `none` or a username. `me` needs a token.
+- `overridden=true`
+
+The list also returns `workflow_counts`.
+
+**On the detail, the agent-vs-human view.** `autonomous` is the agent's own decision, which never changes. `final` is what people did and what reached the customer, or null until someone acts. `differs` says what changed. Real output after an escalation and the manager's approval:
+
+```json
+"autonomous": {"outcome": "REFUND", "refund_amount_myr": "2788.60", "route": "HUMAN_APPROVAL",
+               "matched_txn_id": "TXN-0141972", "reply_text": "Yang dihormati Nur Rohani binti Ibrahim, ..."},
+"final": {"action": "second_tier_approve", "by": "manager1", "at": "2026-10-23T06:51:09", "outcome": "REFUND",
+          "refund_amount_myr": "2788.60", "reply_text": "Yang dihormati Nur Rohani binti Ibrahim, ...", "sent": true},
+"differs": {"decision": false, "refund": false, "reply": false}
+```
+
+Also on the detail:
+- `draft_reply`: an edit waiting to be approved
+- `fraud_outcome`: `{outcome, by, at, reason, proposed_by?}`
+
+From now on, the decision fields in the list and the detail come from the case's **current** run. That's the same as before unless the case was sent back. The contract view and `predictions.csv` always use the agent's original run.
+
+### New dashboard numbers (`GET /api/metrics`)
+
+| Field | What it is |
+|---|---|
+| `cases.by_channel`, `cases.by_language` | counts by complaint channel and reply language |
+| `cases.by_workflow` | escalated, re-running, investigating and closed counts |
+| `sla.compliance`, `sla.closed` | share of closed cases handled within their SLA allowance (auto-resolved count as met). It compares our handling time with the allowance (`resolve_due_at − received_at`), so the past dates don't matter |
+| `turnaround_minutes` | `mean`, `p50` and `p95` minutes from the agent's decision to a person closing the case |
+| `trends.received_by_day` | `[{date, total, by_category}]`, oldest first, for a trend chart |
+| `refunds_myr` | `auto_paid`, `approved_paid` (sent by people), `awaiting` (in open approval cases), `rejected` |
+
+The human counts now include the platform actions. Approvals include second-tier approvals, and an approve with an edited reply counts as `edited_and_approved`.
+
+### Suggested screens (from [PLAN.md](PLAN.md) Phase 3)
+
+- **Login page:** after login, send each role to its screen: officer → Resolution Desk, fraud → Investigation Workbench, manager → Console.
+- **Officer Resolution Desk:**
+  - the queue (`GET /api/cases`, sorted by priority and due date)
+  - the reply first (editable, with the self-check badge), then the decision, refund and calculation, and the evidence panel
+  - the headroom: "Your limit: RM2,000. This refund: RM550. ✓"
+  - buttons: Approve / Edit & approve / Reject / Send back, with **Escalate** replacing Approve when over the limit or sensitive
+- **Fraud Investigation Workbench:**
+  - the suspicious transaction and its `auth_method` first, then related transactions and the timeline from `events`
+  - buttons: Acknowledge → Log investigation / recall → Record outcome, and Escalate when it's high value
+- **Manager Console:**
+  - the dashboard tiles and charts
+  - the escalation queue (`workflow=escalated`)
+  - all cases with Reassign
+  - the audit log
+  - agent vs human (`overridden=true`, then `autonomous` / `final` / `differs`)
+
+**Not built:** live push (WebSocket), the chatbot panel and notifications. Polling is enough.
 
 ## Changelog
 
 - **2026-10-23**: first version. `GET /api/cases`, `GET /api/cases/{id}`, `GET /api/metrics`, `GET /api/audit`; CORS open.
+- **2026-10-23**: added "Coming next": the planned login, roles, actions and new fields (being built in `b-ops-platform`).
+- **2026-10-23**: **login, roles and the platform actions are built** (`b-ops-platform`). New fields on the list and the detail (workflow, sensitive, assigned_to, escalation, overridden; autonomous / final / differs, draft_reply, fraud_outcome); new list filters; new metrics. Lists and the detail now show the **current** run (the same as before unless a case was sent back). Nothing was renamed or removed.

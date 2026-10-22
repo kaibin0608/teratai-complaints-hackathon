@@ -2,7 +2,7 @@
 
 This file tracks progress against [PLAN.md](PLAN.md). When you finish an item, tick it (`[x]`) in the same PR. Owners: **A** is Dev A (decision engine), **B** is Dev B (LLM, pipeline, DB, API), **UI** is the UI developer.
 
-Last updated: 2026-10-23, `dev` at `b136256`.
+Last updated: 2026-10-23, after `b-ops-platform` (branch `feat/b-ops-platform`).
 
 ## Done
 
@@ -19,24 +19,32 @@ Last updated: 2026-10-23, `dev` at `b136256`.
 - **The organisers' contract API** ([api.md](api.md)): `api_check` scores **100.0**, with 9/9 probes. Approve, edit & approve (self-check re-runs), reject, and fraud acknowledge are built.
 - **UI read API** ([UI_API.md](UI_API.md)): `GET /api/cases`, `GET /api/cases/{id}`, `GET /api/metrics`, `GET /api/audit`. CORS is open; there's no login yet.
 - **`backend.bat`:** double-click to start the backend on port 8000.
+- **Bonus platform backend** (B1–B9, `b-ops-platform`):
+  - logins for 4 seeded users, role-filtered reads
+  - two-tier approval (officers RM2,000, fraud RM5,000, 65+ always to the manager)
+  - escalate, second tier, reassign, send back, fraud steps
+  - one gated send, agent vs human, more dashboard numbers
+
+  `api_check` is still 100.0, with 9/9 probes. Documented in [UI_API.md](UI_API.md#login-roles-and-the-platform-actions).
 
 ## Core (main ranking)
 
 - [ ] **C1 · Simple UI:** queues, one case (complaint, transaction, evidence, decision, reply, self-check), Approve / Edit & approve / Reject buttons. Needed for the 10-point human gate. *(UI, in progress; PLAN Phase 3)*
 - [ ] **C2 · API reachable from the organisers' laptop** (venue Wi-Fi or a tunnel), for Checkpoint 2 on Day 2 at 12:00. *(B)*
 - [ ] C3 · Reply-language tweak for formal Malay (about 25 training misses, about 0.07 points). Optional. *(B)*
+- [ ] C4 · `categories/fee.py` fee-type match counts any shared word, so "debit card annual fee" also matches a credit card annual fee and the two tie (e.g. CMP-00010 is held as `ambiguous_match`). Safe, but the exported transaction may be wrong. *(A)*
 
 ## Bonus platform backend (PLAN 2.2–2.4)
 
-- [ ] **B1 · Login:** `users` table, 3 seeded users (officer1, fraud1, manager1), `POST /api/auth/login`, `GET /api/auth/me` (JWT). *(B)*
-- [ ] **B2 · Role checks** on every `/api/*` route, and role-filtered queues: the officer sees approval cases, the fraud analyst sees fraud cases, the manager sees all. The contract routes stay open. *(B)*
-- [ ] **B3 · New case fields:** workflow status, final outcome / refund / reply, approved by, sensitive, assigned to, escalated to. *(B)*
-- [ ] **B4 · Officer actions:** approve (limit check), reject, edit reply (self-check, diff, clears the approval), send back (agent re-run), escalate, flag sensitive. *(B)*
-- [ ] **B5 · Manager actions:** second-tier approve / reject, reassign. *(B)*
-- [ ] **B6 · Fraud actions:** log investigation / recall attempt, record outcome (acknowledge is done). *(B)*
-- [ ] **B7 · One send function** for every human-gated send: right role, approved (second tier if escalated), reply passed the self-check, not already sent. *(B)*
-- [ ] **B8 · Agent vs human comparison** for overridden cases. *(B)*
-- [ ] **B9 · More dashboard numbers:**
+- [x] **B1 · Login:** `users` table, 3 seeded users (officer1, fraud1, manager1), `POST /api/auth/login`, `GET /api/auth/me` (JWT). *(B)*
+- [x] **B2 · Role checks** on every `/api/*` route, and role-filtered queues: the officer sees approval cases, the fraud analyst sees fraud cases, the manager sees all. The contract routes stay open. *(B)*
+- [x] **B3 · New case fields:** workflow status, final outcome / refund / reply, approved by, sensitive, assigned to, escalated to. *(B)*
+- [x] **B4 · Officer actions:** approve (limit check), reject, edit reply (self-check, diff, clears the approval), send back (agent re-run), escalate, flag sensitive. *(B)*
+- [x] **B5 · Manager actions:** second-tier approve / reject, reassign. *(B)*
+- [x] **B6 · Fraud actions:** log investigation / recall attempt, record outcome (acknowledge is done). *(B)*
+- [x] **B7 · One send function** for every human-gated send: right role, approved (second tier if escalated), reply passed the self-check, not already sent. *(B)*
+- [x] **B8 · Agent vs human comparison** for overridden cases. *(B)*
+- [x] **B9 · More dashboard numbers:**
   - SLA compliance %
   - trends over time
   - approval turnaround
@@ -77,9 +85,10 @@ Last updated: 2026-10-23, `dev` at `b136256`.
 - [ ] S7 · Keep the server running from 15:00 until the demo; keep the laptop awake *(B)*
 - [ ] S8 · Run guide `docs/RUNNING.md`: start, fill, regenerate, check *(B)*
 
-## Open questions for the bonus (Dev B to decide)
+## Bonus decisions (Dev B, 2026-10-23)
 
-- Is every 65+ customer automatically "sensitive" (always escalated to the manager)? The plan assumes yes.
-- Build "send back" (agent re-run), or skip it?
-- Should the contract route `POST /cases/{id}/actions` stay as it is (typed name, no login, no limits)? Recommended: yes.
-- Which of the B9 numbers to add, and should they go first as a small change for the UI?
+- 65+ customers are always sensitive (they go to the manager); a manual flag also counts.
+- Send back is built.
+- The contract route stays open (typed name, no limits) but refuses escalated, re-running and closed cases.
+- All five dashboard additions are built. `AUTH_REQUIRED` stays off until the UI's login page exists.
+- Limits: officers RM2,000, fraud analyst RM5,000, manager none.

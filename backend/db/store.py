@@ -67,6 +67,11 @@ def _now() -> str:
     return f"{now_myt():%Y-%m-%d %H:%M:%S}"
 
 
+def engine_result(run: AgentRun) -> EngineResult:
+    """What the self-check needs to judge a reply against this run's decision and evidence."""
+    return EngineResult(match=run.match, decision=run.decision, evidence=run.evidence)
+
+
 def run_cost(run: AgentRun) -> Decimal:
     return run.extract_usage.cost_myr + sum((u.cost_myr for u in run.draft_usage), Decimal("0"))
 
@@ -103,16 +108,7 @@ class CaseStore:
             sent = True
 
         with self.conn:  # one transaction
-            self.conn.execute(
-                "INSERT INTO agent_runs VALUES (?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?,?, ?,?,?)",
-                (run.run_id, run.complaint_id, run.run_kind, _now(),
-                 d and d.category, d and (d.matched_txn_id or ""), d and d.outcome,
-                 d and int(d.refund_amount_myr * 100), d and d.priority, d and d.reply_language, d and d.route,
-                 d and d.hold_reason, None if run.self_check is None else ("passed" if run.self_check.passed else "flagged"),
-                 run.error,
-                 f"{run.extract_usage.provider}:{run.extract_usage.model}", run.prompt_version, run.schema_version,
-                 str(run_cost(run)), latency_ms, run.model_dump_json()),
-            )
+            self._insert_run(run, latency_ms)
             if not existing:
                 self._insert_case(complaint, digest, status, now, run_id=run.run_id, case_state=case_state,
                                   sent=sent, error=error)
@@ -131,6 +127,19 @@ class CaseStore:
                 self._outbox(complaint.complaint_id, run.run_id, "resolution", run.reply_text,
                              int(d.refund_amount_myr * 100), "auto", now)
         return self.get_case(complaint.complaint_id)
+
+    def _insert_run(self, run: AgentRun, latency_ms: int) -> None:
+        d = run.decision
+        self.conn.execute(
+            "INSERT INTO agent_runs VALUES (?,?,?,?, ?,?,?,?,?,?,?, ?,?,?, ?,?,?, ?,?,?)",
+            (run.run_id, run.complaint_id, run.run_kind, _now(),
+             d and d.category, d and (d.matched_txn_id or ""), d and d.outcome,
+             d and int(d.refund_amount_myr * 100), d and d.priority, d and d.reply_language, d and d.route,
+             d and d.hold_reason, None if run.self_check is None else ("passed" if run.self_check.passed else "flagged"),
+             run.error,
+             f"{run.extract_usage.provider}:{run.extract_usage.model}", run.prompt_version, run.schema_version,
+             str(run_cost(run)), latency_ms, run.model_dump_json()),
+        )
 
     def _insert_case(self, complaint: Complaint, digest: str, status: str, now: str, *, run_id: str | None = None,
                      case_state: str | None = None, sent: bool = False, error: str | None = None) -> None:
@@ -173,31 +182,39 @@ class CaseStore:
             raise InvalidAction("reply_text is required for edit_approve")
         if case["case_state"] != "awaiting_approval":
             raise WrongState(f"{complaint_id} is {case['case_state'] or case['status']}, not awaiting_approval")
+        if case["workflow"]:
+            raise WrongState(f"{complaint_id} is {case['workflow']} on the platform")
 
-        run = self.run(case["autonomous_run_id"])
-        reply = run.reply_text
+        run = self.current_run(case)
+        reply, checked = run.reply_text, run.self_check
         if action == "edit_approve":
-            result = check(reply_text, EngineResult(match=run.match, decision=run.decision, evidence=run.evidence))
-            if not result.passed:
+            checked = check(reply_text, engine_result(run))
+            if not checked.passed:
                 with self.conn:
                     self._event(complaint_id, "edit_approve_refused", run.run_id,
-                                {"reason": reason, "problems": result.problems, "reply_text": reply_text}, actor=actor)
-                raise ReplyRefused(result.problems)
+                                {"reason": reason, "problems": checked.problems, "reply_text": reply_text}, actor=actor)
+                raise ReplyRefused(checked.problems)
             reply = reply_text.strip()
-
-        approved, now = action != "reject", _now()
-        human_action = {"action": action, "actor": actor, "reason": reason, "at": now,
-                        "reply_text": reply if approved else None}
-        with self.conn:
-            self.conn.execute(
-                "UPDATE cases SET case_state=?, sent=?, human_action=?, updated_at=? WHERE complaint_id=?",
-                ("approved" if approved else "rejected", int(approved), json.dumps(human_action), now, complaint_id))
-            if approved:
-                self._outbox(complaint_id, run.run_id, "resolution", reply,
-                             int(run.decision.refund_amount_myr * 100), actor, now)
-            self._event(complaint_id, action, run.run_id,
-                        {"reason": reason, "self_check": "passed" if action == "edit_approve" else None}, actor=actor)
+        self.resolve(case, run, action, actor, reason, None if action == "reject" else reply, checked,
+                     detail={"self_check": "passed" if action == "edit_approve" else None})
         return self.get_case(complaint_id)
+
+    def resolve(self, case: dict[str, Any], run: AgentRun, action: str, actor: str, reason: str,
+                reply: str | None, checked: CheckResult | None, *, second_tier: bool = False,
+                workflow: str | None = None, detail: dict | None = None) -> None:
+        """Close an approval case. A reply → approved and sent through the gate; None → rejected, nothing sent.
+        Used by the contract actions and by the platform (backend/db/workflow.py)."""
+        complaint_id, approved, now = case["complaint_id"], reply is not None, _now()
+        human_action = {"action": action, "actor": actor, "reason": reason, "at": now, "reply_text": reply}
+        with self.conn:
+            if approved:
+                self.send(case, run.run_id, "resolution", reply, int(run.decision.refund_amount_myr * 100), actor, now,
+                          checked=checked, second_tier=second_tier)
+            self.conn.execute(
+                "UPDATE cases SET case_state=?, sent=?, human_action=?, workflow=?, updated_at=? WHERE complaint_id=?",
+                ("approved" if approved else "rejected", int(approved), json.dumps(human_action), workflow, now,
+                 complaint_id))
+            self._event(complaint_id, action, run.run_id, {"reason": reason, **(detail or {})}, actor=actor)
 
     def acknowledge(self, complaint_id: str, actor: str, reason: str = "") -> dict[str, Any]:
         """A fraud analyst releases the agent's holding reply. The case stays with the fraud team."""
@@ -207,13 +224,15 @@ class CaseStore:
             raise InvalidAction("actor is required")
         if case["case_state"] != "with_fraud_team" or case["sent"]:
             raise WrongState(f"{complaint_id} is not a fraud case waiting for acknowledgement")
-        run, now = self.run(case["autonomous_run_id"]), _now()
+        if case["workflow"]:
+            raise WrongState(f"{complaint_id} is {case['workflow']} on the platform")
+        run, now = self.current_run(case), _now()
         human_action = {"action": "acknowledge", "actor": actor, "reason": (reason or "").strip(), "at": now,
                         "reply_text": run.reply_text}
         with self.conn:
-            self.conn.execute("UPDATE cases SET sent=1, human_action=?, updated_at=? WHERE complaint_id=?",
-                              (json.dumps(human_action), now, complaint_id))
-            self._outbox(complaint_id, run.run_id, "holding_reply", run.reply_text, 0, actor, now)
+            self.send(case, run.run_id, "holding_reply", run.reply_text, 0, actor, now, checked=run.self_check)
+            self.conn.execute("UPDATE cases SET sent=1, human_action=?, workflow='investigating', updated_at=?"
+                              " WHERE complaint_id=?", (json.dumps(human_action), now, complaint_id))
             self._event(complaint_id, "acknowledge", run.run_id, {"reason": human_action["reason"]}, actor=actor)
         return self.get_case(complaint_id)
 
@@ -224,6 +243,25 @@ class CaseStore:
         if case["status"] != "done":
             raise WrongState(f"{complaint_id} is {case['status']}")
         return case
+
+    def send(self, case: dict[str, Any], run_id: str, kind: str, reply: str, refund_sen: int, by: str, now: str, *,
+             checked: CheckResult | None, second_tier: bool = False) -> None:
+        """The one gate for every message a person releases. Call inside the caller's transaction: a failure
+        raises before anything is written, so the whole action rolls back."""
+        complaint_id = case["complaint_id"]
+        if case["workflow"] == "escalated" and not second_tier:
+            raise WrongState(f"{complaint_id} is escalated; only the manager's second-tier approval can send it")
+        if case["workflow"] == "reprocessing":
+            raise WrongState(f"{complaint_id} is being re-run by the agent")
+        if checked is None or not checked.passed:
+            raise ReplyRefused((checked and checked.problems) or ["the reply has not passed the self-check"])
+        cursor = self.conn.execute(
+            "INSERT OR IGNORE INTO outbound_messages"
+            " (complaint_id, run_id, kind, reply_text, refund_sen, authorised_by, status, created_at)"
+            " VALUES (?,?,?,?,?,?,?,?)",
+            (complaint_id, run_id, kind, reply, refund_sen, by, "sent", now))
+        if cursor.rowcount != 1:
+            raise WrongState(f"{complaint_id}: a {kind} message was already sent")
 
     def _outbox(self, complaint_id: str, run_id: str, kind: str, reply: str, refund_sen: int, by: str, now: str) -> None:
         self.conn.execute(
@@ -256,6 +294,10 @@ class CaseStore:
     def run(self, run_id: str) -> AgentRun | None:
         row = self.conn.execute("SELECT run_json FROM agent_runs WHERE run_id = ?", (run_id,)).fetchone()
         return AgentRun.model_validate_json(row[0]) if row else None
+
+    def current_run(self, case: dict[str, Any]) -> AgentRun:
+        """The run the platform acts on: the autonomous one unless the case was sent back."""
+        return self.run(case["current_run_id"] or case["autonomous_run_id"])
 
     def autonomous_run(self, complaint_id: str) -> AgentRun | None:
         case = self.get_case(complaint_id)
@@ -296,6 +338,41 @@ class CaseStore:
             "human_action": json.loads(case["human_action"]) if case["human_action"] else None,
             "hold_reason": run.decision.hold_reason,
         }
+
+    # --- send back (bonus platform) ---
+
+    def save_reprocess(self, complaint_id: str, run: AgentRun, latency_ms: int) -> dict[str, Any]:
+        """Store a send-back run. It becomes the current run; the autonomous run never changes. A re-run case
+        always waits for a person: one has already been involved, so it is never auto-resolved."""
+        case, now = self._require(complaint_id), _now()
+        with self.conn:
+            self._insert_run(run, latency_ms)
+            if run.decision is None:  # the re-run failed: keep the current run
+                self.conn.execute("UPDATE cases SET workflow=NULL, updated_at=? WHERE complaint_id=?",
+                                  (now, complaint_id))
+                self._event(complaint_id, "send_back_failed", run.run_id, {"error": run.error})
+            else:
+                state = "with_fraud_team" if run.decision.route == "FRAUD_TEAM" else "awaiting_approval"
+                self.conn.execute(
+                    "UPDATE cases SET current_run_id=?, case_state=?, workflow=NULL, draft_reply=NULL, updated_at=?"
+                    " WHERE complaint_id=?", (run.run_id, state, now, complaint_id))
+                self._event(complaint_id, "agent_run", run.run_id,
+                            {"route": run.decision.route, "hold_reason": run.decision.hold_reason, "error": run.error,
+                             "previous_run_id": case["current_run_id"], "run_kind": run.run_kind})
+        return self.get_case(complaint_id)
+
+    def reprocess_failed(self, complaint_id: str, error: str) -> None:
+        with self.conn:
+            self.conn.execute("UPDATE cases SET workflow=NULL, updated_at=? WHERE complaint_id=? AND workflow=?",
+                              (_now(), complaint_id, "reprocessing"))
+            self._event(complaint_id, "send_back_failed", None, {"error": error})
+
+    def reset_reprocessing(self) -> list[str]:
+        """At startup: a send back cut off by a restart isn't silently re-run; the case goes back to its queue."""
+        ids = [r[0] for r in self.conn.execute("SELECT complaint_id FROM cases WHERE workflow = 'reprocessing'")]
+        for complaint_id in ids:
+            self.reprocess_failed(complaint_id, "server restarted during the re-run")
+        return ids
 
     def human_acted(self, complaint_id: str) -> bool:
         return self.conn.execute("SELECT 1 FROM case_events WHERE complaint_id = ? AND actor != 'agent' LIMIT 1",

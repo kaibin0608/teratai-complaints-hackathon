@@ -36,3 +36,7 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 OPENAI_COMPAT_API_KEY = os.getenv("OPENAI_COMPAT_API_KEY", "")
 OPENAI_COMPAT_BASE_URL = os.getenv("OPENAI_COMPAT_BASE_URL", "")
+
+# Bonus platform login. AUTH_REQUIRED off: /api read routes without a token get the manager's view.
+JWT_SECRET = os.getenv("JWT_SECRET") or "dev-only-not-secret"  # an empty JWT_SECRET= in .env gets the default too
+AUTH_REQUIRED = os.getenv("AUTH_REQUIRED", "false").strip().lower() in ("1", "true", "yes")

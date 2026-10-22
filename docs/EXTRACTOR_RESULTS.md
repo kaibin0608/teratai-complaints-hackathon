@@ -214,6 +214,31 @@ The latency here is the pipeline's own time. `api_check`'s "median 6.0 s" also c
 - **CORS open to any origin**: the UI's address on the venue network isn't known in advance, there are no cookies, and the contract routes are already open.
 - **SLA uses an `as_of` clock**: the complaints are dated July–September 2026, so against today's date every open case is overdue. The demo passes `as_of=2026-09-30T16:30`.
 
+## Ops platform (b-ops-platform)
+
+The bonus platform: logins for 4 seeded users, role-filtered reads, two-tier approval, fraud steps, send back, agent vs human and more dashboard numbers. It's documented for the UI in [UI_API.md](UI_API.md#login-roles-and-the-platform-actions). 61 new tests; the full suite passes (2,334).
+
+**The contract is unchanged.** `scoring/api_check.py` on a fresh API database with the real models: **100.0**, case state and sent 10/10, **9/9 probes**, median 4.5 s per complaint.
+
+**The three demo flows, driven over HTTP with the real models** (DeepSeek extraction, Haiku replies):
+
+| Flow | What happened |
+|---|---|
+| 1 · Within the limit: CMP-00244, ATM refund RM550.00 | `officer1` approves → approved, sent, outbox authorised by officer1 |
+| 2 · Over the limit: CMP-00023, failed transfer RM2,788.60 | `officer1` approve → **403** "refund RM2,788.60 is over your limit RM2,000.00" → escalate (waits, `sent: false`) → contract approve **409** (can't bypass) → `manager1` second-tier approve → sent, authorised by manager1. Audit: officer1 escalate, then manager1 second_tier_approve |
+| 3 · Fraud: CMP-00005, scam transfer RM8,085.08 | `fraud1` acknowledge (holding reply sent) → investigate (recall attempt) → record outcome **403** (over RM5,000) → escalate with `confirmed_fraud` → manager approves → outcome recorded, closed. The customer only ever got the holding reply |
+| Send back: CMP-00010 (held `ambiguous_match`) | 202 → re-run in 5.6 s → a second `reprocess` run; the contract view and the autonomous run are unchanged; the case waits for approval again |
+
+**Found during these runs: a Dev A engine issue, not fixed here.** CMP-00010's tie comes from [fee.py:100-103](../backend/agent/categories/fee.py#L100-L103). "Fee type match" counts any shared word over 3 letters, so "debit card annual fee" also matches "Credit card annual fee" (through "card" and "annual"). It ties TXN-0104872 (debit card annual fee, RM12.00) with TXN-0119443 (credit card annual fee, RM150.00). It's safe, because the case is held for a person, but the exported transaction may be wrong. A send-back note can't break the tie, since both transactions match the same words.
+
+**Decisions** (Dev B, 2026-10-23):
+- **Officer limit RM2,000, fraud analyst RM5,000.** No refund in the data is over RM5,000 (the largest is RM4,687.10), so the plan's RM5,000 example would never trigger an escalation. 128 of 466 approval refunds are over RM2,000.
+- **65+ customers are always sensitive** (146 of 1,115 approval and 78 of 520 fraud cases go to the manager), and a manual flag also counts.
+- **Send back is built.** The officer's note is appended to the complaint text, so the extractor sees the new facts. A re-run case is never auto-resolved.
+- **The contract route stays open** (no login, no limits) but refuses escalated, re-running and closed cases.
+- **`AUTH_REQUIRED` stays off** until the UI's login page exists. `JWT_SECRET` is in `config.py`, approved by Dev A.
+- **SLA compliance** compares our handling time with the policy's allowance (`resolve_due_at − received_at`), so the complaints being dated in the past doesn't make everything overdue.
+
 ## How to reproduce
 
 Needs `OPENROUTER_API_KEY` in `.env`. LLM responses are cached in `backend/.cache/llm_cache.db`, so a rerun with the same prompt and model costs nothing.

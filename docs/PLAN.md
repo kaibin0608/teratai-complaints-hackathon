@@ -19,6 +19,14 @@ Backend first, frontend second. Core before bonus, but the data model supports t
 | 2 · The Plan | What this plan builds and how: the 7-step pipeline, matching, policy, self-check, data model, roles, team split, milestones | 7:17 |
 | 3 · Coverage Check | Does this plan cover README.md? Coverage, 5 gaps to fix, open questions | 3:29 |
 
+**▶ [Watch the Teratai Build Tour](https://claude.ai/artifact/1mHE4FAWT4kgWFum1LvTAy)**: a narrated walkthrough of every branch merged into `dev` (snapshot of 23 Oct, `dev` at `6dc8059`): what each built, how it works, and its measured results.
+
+| Chapter | Covers | Length |
+|---|---|---|
+| 1 · Dev A: Rules Engine | Step 0 contracts and stubs; Danial's 6 branches: tools and dates, handler pattern and scoring, the 7 categories, router, self-check, engine | 4:36 |
+| 2 · Dev B: LLM + Data | LLM config and client, extractor, case store, batch runner and export, reply writer | 2:48 |
+| 3 · API + Hardening | The organisers' update, contract API, messy-text test set, engine fixes, UI read API, where `dev` stands, what's left | 3:12 |
+
 ---
 
 ## Hackathon Scoring Reminder
@@ -173,8 +181,8 @@ Until Checkpoint 2 the core can be demoed through FastAPI `/docs`. The UI can ke
 
 | Role | Sees | Can do | Approval limit |
 |---|---|---|---|
-| **Complaints Officer** | HUMAN_APPROVAL queue | Approve / edit reply then approve / reject / send back. Escalate to manager if refund > their limit or case is sensitive | e.g. RM 5,000 |
-| **Fraud Analyst** | FRAUD_TEAM queue | Acknowledge / log investigation or recall attempt / record outcome. Escalate sensitive or high-value cases to manager | e.g. RM 5,000 |
+| **Complaints Officer** | HUMAN_APPROVAL queue | Approve / edit reply then approve / reject / send back. Escalate to manager if refund > their limit or case is sensitive | **RM2,000** (built) |
+| **Fraud Analyst** | FRAUD_TEAM queue | Acknowledge / log investigation or recall attempt / record outcome. Escalate sensitive or high-value cases to manager | **RM5,000** (built) |
 | **Manager** | Both queues + escalation queue + audit log + dashboard metrics | Everything both tiers can do + second-tier approval for escalated cases + **reassign** cases. Only role that sees both queues | No limit |
 
 AUTO_RESOLVE cases appear read-only (audit only) for the manager.
@@ -208,6 +216,8 @@ Case routed to HUMAN_APPROVAL or FRAUD_TEAM
 ```
 
 **Limit basis:** officer — the refund amount. Fraud analyst — the disputed transaction amount (fraud cases carry no refund). Assumption; raise with organisers (see Open Questions).
+
+**Limits as built (b-ops-platform, decided by Dev B 2026-10-23):** officers RM2,000, fraud analyst RM5,000, manager none. No refund in the data is over RM5,000 (the largest is RM4,687.10), so a RM5,000 officer limit would never be reached; 128 of 466 approval refunds are over RM2,000, so the over-limit escalation shows up on its own. 126 of 520 fraud cases have a disputed transaction over RM5,000. 65+ customers are always sensitive (146 of 1,115 approval and 78 of 520 fraud cases).
 
 **Sensitive flag** (forces escalation regardless of amount): customer is vulnerable (65+ on received_at), or a first-tier user flags it manually with a reason. Extend only if organisers clarify.
 
@@ -478,14 +488,15 @@ Checkpoint 2 (Day 2 12:00) needs decision, reply, approval and write-back on 50 
 **2.2 DB Schema + Auth (auth is bonus)**
 - SQLite: `agent_runs`, `cases`, `case_events`, `outbound_messages` (built); `users`, `llm_cache` later (schema above)
 - Seed users (bonus):
-  - `officer1` — Complaints Officer, approval_limit_myr = 5000
+  - `officer1`, `officer2` — Complaints Officer, approval_limit_myr = 2000 (two, so reassign can be shown)
   - `fraud1` — Fraud Analyst, approval_limit_myr = 5000
   - `manager1` — Manager, no limit
+  - all share the demo password `teratai123` (bcrypt-hashed; `backend/db/seed.py`)
 - Simple auth (bonus): seeded users + `role` column, JWT on login, role checks enforced **in the backend** on every `/api/*` route (hiding links is not enough). Never on the contract routes
 
 **2.3 Bonus platform endpoints (`/api/*`, authenticated)**
 
-**Built, open for now (b-ops-read-api):** the four read routes `GET /api/cases`, `GET /api/cases/{id}`, `GET /api/metrics` and `GET /api/audit`, documented for the UI in [UI_API.md](UI_API.md). They have no login yet; the bonus login adds the role checks below to these same routes without changing their shape.
+**Built:** the four read routes (b-ops-read-api), then login, roles and every action below (b-ops-platform), documented for the UI in [UI_API.md](UI_API.md). Reads work without a token while `AUTH_REQUIRED` is off (the manager's view); with a token they're filtered by role. Actions always need a token. The contract routes stay open but refuse (409) a case that is escalated, re-running or closed on the platform.
 
 These serve the role screens. They read the same case store and record the same `human_action` / `case_events`; first-tier approve and reject go through the same function as `POST /cases/{id}/actions`.
 - `POST /api/auth/login` — returns JWT with role

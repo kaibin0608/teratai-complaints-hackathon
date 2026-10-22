@@ -17,16 +17,19 @@ from backend.db.store import CaseStore, ReplyRefused
 OFFICER = "Aina (officer)"
 
 # Pinned shapes: docs/UI_API.md documents exactly these keys.
-LIST_KEYS = {"total", "limit", "offset", "counts", "items"}
+LIST_KEYS = {"total", "limit", "offset", "counts", "workflow_counts", "items"}
 ITEM_KEYS = {"complaint_id", "customer_id", "customer_name", "received_at", "channel", "subject", "status", "queue",
              "case_state", "sent", "category", "outcome", "refund_amount_myr", "priority", "route", "hold_reason",
-             "self_check", "vulnerable", "resolve_due_at", "waiting_reason", "human_action", "updated_at"}
+             "self_check", "vulnerable", "resolve_due_at", "waiting_reason", "human_action", "updated_at",
+             # bonus platform (b-ops-platform)
+             "workflow", "sensitive", "sensitive_reason", "assigned_to", "escalation", "overridden"}
 DETAIL_KEYS = {"case", "complaint", "customer", "clues", "match", "decision", "evidence", "reply", "usage", "runs",
-               "events", "outbound"}
+               "events", "outbound", "draft_reply", "fraud_outcome", "autonomous", "final", "differs"}
 CASE_KEYS = {"complaint_id", "status", "queue", "case_state", "sent", "error", "waiting_reason", "human_action",
-             "autonomous_run_id", "current_run_id", "created_at", "updated_at"}
+             "autonomous_run_id", "current_run_id", "created_at", "updated_at",
+             "workflow", "sensitive", "sensitive_reason", "assigned_to", "escalation"}
 METRIC_KEYS = {"cases", "auto_resolve_rate", "holds", "self_check", "human", "sla", "cost_myr", "latency_ms",
-               "models", "throughput"}
+               "models", "throughput", "turnaround_minutes", "trends", "refunds_myr"}
 AUDIT_KEYS = {"total", "limit", "offset", "facets", "items"}
 EVENT_KEYS = {"id", "complaint_id", "actor", "action", "run_id", "detail", "created_at"}
 
@@ -225,7 +228,8 @@ def test_metrics_sla_as_of_the_live_round_day():
     put(s, "CMP-00011", resolve_due_at=dt.datetime(2026, 10, 3, 10))
     put(s, "CMP-00001")  # auto-resolved: not open
     sla = Q.metrics(s.conn, dt.datetime(2026, 9, 30, 16, 30))["sla"]
-    assert sla == {"as_of": "2026-09-30T16:30:00", "open": 2, "overdue": 1, "due_within_24h": 0}
+    assert sla == {"as_of": "2026-09-30T16:30:00", "open": 2, "overdue": 1, "due_within_24h": 0,
+                   "compliance": 1.0, "closed": 1}  # the auto-resolved case counts as met
 
 
 def test_metrics_counts_refused_edits_and_holds(store):

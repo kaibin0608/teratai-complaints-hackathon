@@ -19,6 +19,8 @@ from backend.db.store import run_cost
 
 QUEUES = ("processing", "error", "auto_resolved", "awaiting_approval", "with_fraud_team", "approved", "rejected")
 OPEN_QUEUES = ("awaiting_approval", "with_fraud_team")
+WORKFLOWS = ("escalated", "reprocessing", "investigating", "closed")  # bonus platform state (backend/db/workflow.py)
+VULNERABLE_REASON = "Customer aged 65+"
 HOLD_TEXT = {
     "customer_not_found": "Customer not found",
     "ambiguous_match": "Ambiguous match",
@@ -34,8 +36,10 @@ FILTERS = {  # list filter -> allowed values
     "category": get_args(Category),
     "priority": get_args(Priority),
     "hold_reason": (*get_args(HoldReason), "none"),
+    "workflow": (*WORKFLOWS, "none"),
 }
 HUMAN_ACTIONS = ("approve", "reject", "edit_approve", "acknowledge")
+FRAUD_OUTCOMES = ("confirmed_fraud", "not_fraud", "recall_succeeded", "recall_failed")
 
 
 class BadQuery(ValueError):
@@ -84,9 +88,16 @@ def limit_text() -> str:
     return f"RM{limit:,.0f}" if limit == limit.to_integral_value() else f"RM{limit:,.2f}"
 
 
-def waiting_reason(queue: str, hold_reason: str | None, outcome: str | None) -> str | None:
+def waiting_reason(queue: str, hold_reason: str | None, outcome: str | None,
+                   workflow: str | None = None) -> str | None:
     """Why the case is in its queue, for staff. Closed cases aren't waiting."""
     hold = HOLD_TEXT.get(hold_reason) if hold_reason else None
+    if workflow == "closed":
+        return None
+    if workflow == "reprocessing":
+        return "Sent back: the agent is re-running it"
+    if workflow == "escalated":
+        return "Escalated to the manager"
     if queue == "processing":
         return "Agent is working on it"
     if queue == "error":
@@ -99,6 +110,14 @@ def waiting_reason(queue: str, hold_reason: str | None, outcome: str | None) -> 
         return {"REFUND": f"Refund over {limit_text()}", "DECLINE": "Decline needs approval"}.get(outcome,
                                                                                                     "Needs approval")
     return None
+
+
+def _record(text: str | None) -> dict[str, Any] | None:
+    """A stored JSON record (human_action, escalation, draft_reply, fraud_outcome) with its `at` time as ISO."""
+    record = _json(text)
+    if record and record.get("at"):
+        record["at"] = iso(record["at"])
+    return record
 
 
 def _json(text: str | None) -> Any:
@@ -116,15 +135,26 @@ def _rate(part: int, whole: int) -> float | None:
 
 # --- queues ---
 
+# r = the current run (the autonomous one unless the case was sent back); a = the autonomous run.
 CASE_ROWS = """
 SELECT c.complaint_id, c.customer_id, c.received_at, c.channel, c.subject, c.status, c.case_state, c.sent,
        c.human_action, c.updated_at, COALESCE(c.case_state, c.status) AS queue,
+       c.workflow, c.sensitive_reason AS flagged_reason, c.assigned_to, c.escalation,
        r.category, r.outcome, r.refund_sen, r.priority, r.route, r.hold_reason, r.self_check,
+       CASE WHEN r.route IN ('HUMAN_APPROVAL', 'FRAUD_TEAM') THEN r.route END AS team,
        json_extract(r.run_json, '$.decision.vulnerable') AS vulnerable,
        json_extract(r.run_json, '$.decision.resolve_due_at') AS resolve_due_at,
        json_extract(r.run_json, '$.evidence.customer.full_name') AS customer_name,
+       (c.sensitive_reason IS NOT NULL OR COALESCE(json_extract(r.run_json, '$.decision.vulnerable'), 0) = 1)
+           AS sensitive,
+       (c.case_state = 'rejected'
+        OR a.outcome IS NOT r.outcome OR a.refund_sen IS NOT r.refund_sen OR a.matched_txn_id IS NOT r.matched_txn_id
+        OR COALESCE(json_extract(c.human_action, '$.reply_text') != json_extract(a.run_json, '$.reply_text'), 0))
+           AS overridden,
        (SELECT MAX(e.id) FROM case_events e WHERE e.complaint_id = c.complaint_id) AS last_event_id
-FROM cases c LEFT JOIN agent_runs r ON r.run_id = c.autonomous_run_id
+FROM cases c
+LEFT JOIN agent_runs r ON r.run_id = COALESCE(c.current_run_id, c.autonomous_run_id)
+LEFT JOIN agent_runs a ON a.run_id = c.autonomous_run_id
 """
 ORDER = {
     "priority": "CASE priority WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 WHEN 'P3' THEN 3 ELSE 4 END,"
@@ -133,15 +163,34 @@ ORDER = {
 }
 
 
-def queue_counts(conn: sqlite3.Connection) -> dict[str, int]:
+def _scoped(scope: str | None) -> tuple[str, list]:
+    """The role filter: a team (HUMAN_APPROVAL / FRAUD_TEAM) or None for the manager's view of everything."""
+    return (f"SELECT * FROM ({CASE_ROWS}) WHERE team = ?", [scope]) if scope else (f"SELECT * FROM ({CASE_ROWS})", [])
+
+
+def queue_counts(conn: sqlite3.Connection, scope: str | None = None) -> dict[str, int]:
     counts = dict.fromkeys(QUEUES, 0)
-    for queue, n in conn.execute("SELECT COALESCE(case_state, status), COUNT(*) FROM cases GROUP BY 1"):
+    base, args = _scoped(scope)
+    for queue, n in conn.execute(f"SELECT queue, COUNT(*) FROM ({base}) GROUP BY 1", args):
         counts[queue] = n
     return counts
 
 
+def workflow_counts(conn: sqlite3.Connection, scope: str | None = None) -> dict[str, int]:
+    counts = dict.fromkeys(WORKFLOWS, 0)
+    base, args = _scoped(scope)
+    for workflow, n in conn.execute(f"SELECT workflow, COUNT(*) FROM ({base}) WHERE workflow IS NOT NULL GROUP BY 1",
+                                    args):
+        counts[workflow] = n
+    return counts
+
+
+def _sensitive_reason(row: sqlite3.Row) -> str | None:
+    return row["flagged_reason"] or (VULNERABLE_REASON if row["vulnerable"] else None)
+
+
 def _item(row: sqlite3.Row) -> dict[str, Any]:
-    acted = _json(row["human_action"])
+    acted = _record(row["human_action"])
     return {
         "complaint_id": row["complaint_id"],
         "customer_id": row["customer_id"],
@@ -162,19 +211,40 @@ def _item(row: sqlite3.Row) -> dict[str, Any]:
         "self_check": row["self_check"],
         "vulnerable": None if row["vulnerable"] is None else bool(row["vulnerable"]),
         "resolve_due_at": iso(row["resolve_due_at"]),
-        "waiting_reason": waiting_reason(row["queue"], row["hold_reason"], row["outcome"]),
+        "waiting_reason": waiting_reason(row["queue"], row["hold_reason"], row["outcome"], row["workflow"]),
         "human_action": acted and {k: acted.get(k) for k in ("action", "actor", "at")},
         "updated_at": iso(row["updated_at"]),
+        "workflow": row["workflow"],
+        "sensitive": bool(row["sensitive"]),
+        "sensitive_reason": _sensitive_reason(row),
+        "assigned_to": row["assigned_to"],
+        "escalation": _record(row["escalation"]),
+        "overridden": bool(row["overridden"]),
     }
 
 
 def list_cases(conn: sqlite3.Connection, *, queue: str | None = None, route: str | None = None,
                category: str | None = None, priority: str | None = None, hold_reason: str | None = None,
-               q: str | None = None, sort: str = "priority", limit: int = 50, offset: int = 0) -> dict[str, Any]:
-    """GET /api/cases. Raises BadQuery for an unknown filter value."""
+               workflow: str | None = None, sensitive: bool | None = None, assigned_to: str | None = None,
+               overridden: bool | None = None, q: str | None = None, sort: str = "priority", limit: int = 50,
+               offset: int = 0, scope: str | None = None, me: str | None = None) -> dict[str, Any]:
+    """GET /api/cases. scope is the viewer's team (None = everything); me is the viewer's username.
+    Raises BadQuery for an unknown filter value."""
     where, args = [], []
+    for flag, value in (("sensitive", sensitive), ("overridden", overridden)):
+        if value is not None:
+            where.append(f"{flag} = ?")
+            args.append(int(value))
+    if assigned_to:
+        if assigned_to == "none":
+            where.append("assigned_to IS NULL")
+        elif assigned_to == "me" and not me:
+            raise BadQuery("assigned_to=me needs a login")
+        else:
+            where.append("assigned_to = ?")
+            args.append(me if assigned_to == "me" else assigned_to)
     for name, raw in (("queue", queue), ("route", route), ("category", category), ("priority", priority),
-                      ("hold_reason", hold_reason)):
+                      ("hold_reason", hold_reason), ("workflow", workflow)):
         values = split(name, raw)
         if not values:
             continue
@@ -191,11 +261,13 @@ def list_cases(conn: sqlite3.Connection, *, queue: str | None = None, route: str
     if sort not in ORDER:
         raise BadQuery(f"unknown sort {sort}; use {', '.join(ORDER)}")
 
-    base = f"SELECT * FROM ({CASE_ROWS})" + (" WHERE " + " AND ".join(where) if where else "")
+    scoped, scope_args = _scoped(scope)
+    base = f"SELECT * FROM ({scoped})" + (" WHERE " + " AND ".join(where) if where else "")
+    args = [*scope_args, *args]
     total = conn.execute(f"SELECT COUNT(*) FROM ({base})", args).fetchone()[0]
     rows = conn.execute(f"{base} ORDER BY {ORDER[sort]} LIMIT ? OFFSET ?", [*args, limit, offset]).fetchall()
-    return {"total": total, "limit": limit, "offset": offset, "counts": queue_counts(conn),
-            "items": [_item(r) for r in rows]}
+    return {"total": total, "limit": limit, "offset": offset, "counts": queue_counts(conn, scope),
+            "workflow_counts": workflow_counts(conn, scope), "items": [_item(r) for r in rows]}
 
 
 # --- one case ---
@@ -204,17 +276,25 @@ def _usage(usage) -> dict[str, Any]:
     return {**usage.model_dump(mode="json"), "cost_myr": cost(usage.cost_myr)}
 
 
-def case_detail(conn: sqlite3.Connection, complaint_id: str) -> dict[str, Any] | None:
-    """GET /api/cases/{id}: the whole decision trail, from the autonomous run. None when unknown."""
+def _run(conn: sqlite3.Connection, run_id: str | None) -> tuple[AgentRun | None, int | None]:
+    row = conn.execute("SELECT run_json, latency_ms FROM agent_runs WHERE run_id = ?", (run_id,)).fetchone() \
+        if run_id else None
+    return (AgentRun.model_validate_json(row["run_json"]), row["latency_ms"]) if row else (None, None)
+
+
+def case_detail(conn: sqlite3.Connection, complaint_id: str, scope: str | None = None) -> dict[str, Any] | None:
+    """GET /api/cases/{id}: the whole decision trail, from the current run (the autonomous one unless the case
+    was sent back). None when unknown, or outside the viewer's team (scope)."""
     case = conn.execute("SELECT *, COALESCE(case_state, status) AS queue FROM cases WHERE complaint_id = ?",
                         (complaint_id,)).fetchone()
     if case is None:
         return None
-    run_row = conn.execute("SELECT run_json, latency_ms FROM agent_runs WHERE run_id = ?",
-                           (case["autonomous_run_id"],)).fetchone() if case["autonomous_run_id"] else None
-    run = AgentRun.model_validate_json(run_row["run_json"]) if run_row else None
+    run, latency_ms = _run(conn, case["current_run_id"] or case["autonomous_run_id"])
     d = run.decision if run else None
+    if scope and (d is None or d.route != scope):
+        return None
     ev = run.evidence if d else None
+    sensitive = case["sensitive_reason"] or (VULNERABLE_REASON if d and d.vulnerable else None)
 
     detail: dict[str, Any] = {
         "case": {
@@ -224,8 +304,13 @@ def case_detail(conn: sqlite3.Connection, complaint_id: str) -> dict[str, Any] |
             "case_state": case["case_state"],
             "sent": bool(case["sent"]),
             "error": case["error"],
-            "waiting_reason": waiting_reason(case["queue"], d and d.hold_reason, d and d.outcome),
-            "human_action": _json(case["human_action"]),
+            "waiting_reason": waiting_reason(case["queue"], d and d.hold_reason, d and d.outcome, case["workflow"]),
+            "human_action": _record(case["human_action"]),
+            "workflow": case["workflow"],
+            "sensitive": sensitive is not None,
+            "sensitive_reason": sensitive,
+            "assigned_to": case["assigned_to"],
+            "escalation": _record(case["escalation"]),
             "autonomous_run_id": case["autonomous_run_id"],
             "current_run_id": case["current_run_id"],
             "created_at": iso(case["created_at"]),
@@ -248,7 +333,7 @@ def case_detail(conn: sqlite3.Connection, complaint_id: str) -> dict[str, Any] |
             "evidence": evidence,
             "reply": {"text": run.reply_text, "redraft_count": run.redraft_count,
                       "self_check": run.self_check.model_dump(mode="json") if run.self_check else None},
-            "usage": {"cost_myr": cost(run_cost(run)), "latency_ms": run_row["latency_ms"],
+            "usage": {"cost_myr": cost(run_cost(run)), "latency_ms": latency_ms,
                       "prompt_version": run.prompt_version, "schema_version": run.schema_version,
                       "policy_version": run.policy_version, "extract": _usage(run.extract_usage),
                       "draft": [_usage(u) for u in run.draft_usage]},
@@ -263,7 +348,39 @@ def case_detail(conn: sqlite3.Connection, complaint_id: str) -> dict[str, Any] |
     detail["outbound"] = [{"kind": m["kind"], "reply_text": m["reply_text"], "refund_amount_myr": money(m["refund_sen"]),
                            "authorised_by": m["authorised_by"], "status": m["status"],
                            "created_at": iso(m["created_at"])} for m in outbound]
+    detail["draft_reply"] = _record(case["draft_reply"])
+    detail["fraud_outcome"] = _record(case["fraud_outcome"])
+    detail.update(_agent_vs_human(conn, case, d, detail["outbound"]))
     return detail
+
+
+def _agent_vs_human(conn: sqlite3.Connection, case: sqlite3.Row, current, outbound: list[dict]) -> dict[str, Any]:
+    """The agent's autonomous decision beside what people did and what reached the customer."""
+    auto_run = _run(conn, case["autonomous_run_id"])[0] if case["autonomous_run_id"] else None
+    a = auto_run.decision if auto_run else None
+    autonomous = a and {"outcome": a.outcome, "refund_amount_myr": f"{a.refund_amount_myr:.2f}", "route": a.route,
+                        "matched_txn_id": a.matched_txn_id, "reply_text": auto_run.reply_text}
+    acted, fraud = _record(case["human_action"]), _record(case["fraud_outcome"])
+    resolution = next((m for m in outbound if m["kind"] == "resolution"), None)
+    sent_reply = next((m["reply_text"] for m in outbound if m["authorised_by"] != "auto"), None)
+    final = None
+    if fraud:
+        final = {"action": "record_outcome", "by": fraud["by"], "at": fraud["at"], "outcome": fraud["outcome"],
+                 "refund_amount_myr": "0.00", "reply_text": sent_reply, "sent": bool(case["sent"])}
+    elif acted:
+        rejected = case["case_state"] == "rejected"
+        final = {"action": acted["action"], "by": acted["actor"], "at": acted["at"],
+                 "outcome": "REJECTED" if rejected else (current.outcome if current else None),
+                 "refund_amount_myr": resolution["refund_amount_myr"] if resolution else "0.00",
+                 "reply_text": sent_reply, "sent": bool(case["sent"])}
+    changed = bool(a and current and (a.outcome, a.refund_amount_myr, a.matched_txn_id)
+                   != (current.outcome, current.refund_amount_myr, current.matched_txn_id))
+    differs = {"decision": bool(final and final["outcome"] == "REJECTED") or changed,
+               "refund": bool(final and autonomous and final["refund_amount_myr"] != autonomous["refund_amount_myr"]
+                              and final["outcome"] not in (*FRAUD_OUTCOMES,)),
+               "reply": bool(final and autonomous and final["reply_text"] is not None
+                             and final["reply_text"] != autonomous["reply_text"])}
+    return {"autonomous": autonomous, "final": final, "differs": differs}
 
 
 def _event(row: sqlite3.Row) -> dict[str, Any]:
@@ -274,13 +391,25 @@ def _event(row: sqlite3.Row) -> dict[str, Any]:
 # --- dashboard ---
 
 METRIC_ROWS = """
-SELECT COALESCE(c.case_state, c.status) AS queue, r.route, r.category, r.priority, r.outcome, r.hold_reason,
+SELECT c.complaint_id, COALESCE(c.case_state, c.status) AS queue, c.channel, c.received_at, c.workflow,
+       r.route, r.category, r.priority, r.outcome, r.hold_reason, r.reply_language, r.refund_sen,
        r.cost_myr, r.latency_ms, r.created_at AS run_at, r.extract_model,
        json_extract(r.run_json, '$.redraft_count') AS redrafts,
        json_extract(r.run_json, '$.draft_usage[0].provider') || ':' ||
        json_extract(r.run_json, '$.draft_usage[0].model') AS draft_model,
-       json_extract(r.run_json, '$.decision.resolve_due_at') AS due
-FROM cases c LEFT JOIN agent_runs r ON r.run_id = c.autonomous_run_id
+       json_extract(r.run_json, '$.decision.resolve_due_at') AS due,
+       cur.outcome AS current_outcome, cur.refund_sen AS current_refund_sen
+FROM cases c
+LEFT JOIN agent_runs r ON r.run_id = c.autonomous_run_id
+LEFT JOIN agent_runs cur ON cur.run_id = COALESCE(c.current_run_id, c.autonomous_run_id)
+"""
+CLOSING_ACTIONS = ("approve", "edit_approve", "reject", "second_tier_approve", "second_tier_reject", "record_outcome")
+EVENT_TIMES = f"""
+SELECT complaint_id,
+       MIN(CASE WHEN action = 'ingest' THEN created_at END) AS ingested,
+       MIN(CASE WHEN action = 'agent_run' THEN created_at END) AS decided,
+       MIN(CASE WHEN action IN ({','.join(repr(a) for a in CLOSING_ACTIONS)}) THEN created_at END) AS closed
+FROM case_events GROUP BY complaint_id
 """
 
 
@@ -296,8 +425,12 @@ def metrics(conn: sqlite3.Connection, as_of: dt.datetime) -> dict[str, Any]:
     decided = [r for r in rows if r["outcome"] is not None]
     ran = [r for r in rows if r["cost_myr"] is not None]
     actions = dict(conn.execute("SELECT action, COUNT(*) FROM case_events GROUP BY action").fetchall())
-    human = {"approved": actions.get("approve", 0), "rejected": actions.get("reject", 0),
-             "edited_and_approved": actions.get("edit_approve", 0), "acknowledged": actions.get("acknowledge", 0)}
+    edited_platform = conn.execute("SELECT COUNT(*) FROM case_events WHERE action = 'approve'"
+                                   " AND json_extract(detail, '$.edited') = 1").fetchone()[0]
+    human = {"approved": actions.get("approve", 0) - edited_platform + actions.get("second_tier_approve", 0),
+             "rejected": actions.get("reject", 0) + actions.get("second_tier_reject", 0),
+             "edited_and_approved": actions.get("edit_approve", 0) + edited_platform,
+             "acknowledged": actions.get("acknowledge", 0)}
     decided_by_people = human["approved"] + human["rejected"] + human["edited_and_approved"]
 
     open_due = [parse_myt(r["due"]) if r["due"] else None for r in rows if r["queue"] in OPEN_QUEUES]
@@ -307,6 +440,7 @@ def metrics(conn: sqlite3.Connection, as_of: dt.datetime) -> dict[str, Any]:
     hours = (run_times[-1] - run_times[0]).total_seconds() / 3600 if len(run_times) > 1 else 0
     total_cost = sum((Decimal(v) for (v,) in conn.execute("SELECT cost_myr FROM agent_runs")), Decimal("0"))
     holds = _tally(decided, "hold_reason", get_args(HoldReason))
+    sla_extra, turnaround = _handling(conn, rows)
 
     return {
         "cases": {
@@ -316,6 +450,9 @@ def metrics(conn: sqlite3.Connection, as_of: dt.datetime) -> dict[str, Any]:
             "by_category": _tally(decided, "category", get_args(Category)),
             "by_priority": _tally(decided, "priority", get_args(Priority)),
             "by_outcome": _tally(decided, "outcome", get_args(Outcome)),
+            "by_channel": dict(Counter(r["channel"] for r in rows)),
+            "by_language": _tally(decided, "reply_language", ("EN", "MS")),
+            "by_workflow": _tally(rows, "workflow", WORKFLOWS),
         },
         "auto_resolve_rate": _rate(sum(r["queue"] == "auto_resolved" for r in decided), len(decided)),
         "holds": {"total": sum(holds.values()), "by_reason": holds},
@@ -330,7 +467,11 @@ def metrics(conn: sqlite3.Connection, as_of: dt.datetime) -> dict[str, Any]:
             "open": len(open_due),
             "overdue": sum(1 for due in open_due if due and due < as_of),
             "due_within_24h": sum(1 for due in open_due if due and as_of <= due < as_of + dt.timedelta(hours=24)),
+            **sla_extra,
         },
+        "turnaround_minutes": turnaround,
+        "trends": {"received_by_day": _received_by_day(rows)},
+        "refunds_myr": _refunds(conn, rows),
         "cost_myr": {
             "total": cost(total_cost),
             "mean": cost(sum(costs) / len(costs)) if costs else None,
@@ -355,6 +496,57 @@ def metrics(conn: sqlite3.Connection, as_of: dt.datetime) -> dict[str, Any]:
             "per_hour": round(len(decided) / hours, 1) if hours else None,
         },
     }
+
+
+def _handling(conn: sqlite3.Connection, rows: list) -> tuple[dict[str, Any], dict[str, Any]]:
+    """SLA compliance and turnaround from the event log. Durations only: our handling time against the allowance the
+    policy gives (resolve_due_at − received_at), so the complaints being dated in the past doesn't matter."""
+    times = {r["complaint_id"]: r for r in conn.execute(EVENT_TIMES)}
+    met = closed = 0
+    minutes = []
+    for r in rows:
+        auto = r["queue"] == "auto_resolved"
+        done = auto or r["queue"] in ("approved", "rejected") or r["workflow"] == "closed"
+        if not done or r["outcome"] is None:
+            continue
+        closed += 1
+        if auto:
+            met += 1
+            continue
+        t = times.get(r["complaint_id"])
+        if not (t and t["closed"] and t["ingested"] and r["due"]):
+            continue
+        handled = parse_myt(t["closed"]) - parse_myt(t["ingested"])
+        met += handled <= parse_myt(r["due"]) - parse_myt(r["received_at"])
+        if t["decided"]:
+            minutes.append((parse_myt(t["closed"]) - parse_myt(t["decided"])).total_seconds() / 60)
+    minutes.sort()
+    stat = (lambda v: None if v is None else round(v, 1))
+    return ({"compliance": _rate(met, closed), "closed": closed},
+            {"mean": stat(sum(minutes) / len(minutes)) if minutes else None,
+             "p50": stat(_percentile(minutes, 50)), "p95": stat(_percentile(minutes, 95))})
+
+
+def _received_by_day(rows: list) -> list[dict[str, Any]]:
+    days: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        day = days.setdefault(r["received_at"][:10], {"total": 0, "by_category": dict.fromkeys(get_args(Category), 0)})
+        day["total"] += 1
+        if r["category"]:
+            day["by_category"][r["category"]] += 1
+    return [{"date": date, **days[date]} for date in sorted(days)]
+
+
+def _refunds(conn: sqlite3.Connection, rows: list) -> dict[str, str]:
+    paid = dict(conn.execute(
+        "SELECT CASE WHEN authorised_by = 'auto' THEN 'auto' ELSE 'people' END, COALESCE(SUM(refund_sen), 0)"
+        " FROM outbound_messages WHERE kind = 'resolution' GROUP BY 1").fetchall())
+    awaiting = sum(r["current_refund_sen"] or 0 for r in rows
+                   if r["queue"] == "awaiting_approval" and r["current_outcome"] == "REFUND")
+    rejected = sum(r["current_refund_sen"] or 0 for r in rows
+                   if r["queue"] == "rejected" and r["current_outcome"] == "REFUND")
+    return {"auto_paid": money(paid.get("auto", 0)), "approved_paid": money(paid.get("people", 0)),
+            "awaiting": money(awaiting), "rejected": money(rejected)}
 
 
 # --- audit log ---

@@ -47,8 +47,7 @@ CREATE TABLE IF NOT EXISTS cases (
     sent              INTEGER NOT NULL DEFAULT 0,
     error             TEXT,
     created_at        TEXT NOT NULL,
-    updated_at        TEXT NOT NULL,
-    human_action      TEXT            -- JSON {action, actor, reason, at, reply_text}; NULL until a person acts
+    updated_at        TEXT NOT NULL   -- more columns: ADDED_CASE_COLUMNS
 );
 
 CREATE TABLE IF NOT EXISTS case_events (
@@ -75,6 +74,14 @@ CREATE TABLE IF NOT EXISTS outbound_messages (
     UNIQUE (complaint_id, kind)       -- a retry or rerun can never send twice
 );
 
+CREATE TABLE IF NOT EXISTS users (      -- bonus platform logins (backend/db/seed.py)
+    username           TEXT PRIMARY KEY,
+    password_hash      TEXT NOT NULL,     -- bcrypt
+    full_name          TEXT NOT NULL,
+    role               TEXT NOT NULL,     -- officer | fraud | manager
+    approval_limit_sen INTEGER            -- NULL = no limit (manager)
+);
+
 CREATE TRIGGER IF NOT EXISTS agent_runs_no_update BEFORE UPDATE ON agent_runs
 BEGIN SELECT RAISE(ABORT, 'agent_runs is append-only'); END;
 CREATE TRIGGER IF NOT EXISTS agent_runs_no_delete BEFORE DELETE ON agent_runs
@@ -86,6 +93,19 @@ BEGIN SELECT RAISE(ABORT, 'case_events is append-only'); END;
 """
 
 
+# Added after the first release; init_db adds them to older databases. All TEXT, NULL by default.
+ADDED_CASE_COLUMNS = (
+    "human_action",       # JSON {action, actor, reason, at, reply_text}: the contract's record of a person acting
+    # bonus platform (backend/db/workflow.py)
+    "workflow",           # NULL | escalated | reprocessing | investigating | closed
+    "sensitive_reason",   # set by a manual flag; 65+ customers are sensitive without it
+    "assigned_to",        # username
+    "escalation",         # JSON {by, at, reason, proposal}
+    "draft_reply",        # JSON {text, self_check, problems, by, at}: an edited reply waiting to be approved
+    "fraud_outcome",      # JSON {outcome, by, at, reason}
+)
+
+
 def init_db(conn: sqlite3.Connection) -> None:
     """Create everything that is missing; never drops or rewrites data."""
     conn.execute("PRAGMA journal_mode = WAL")
@@ -93,6 +113,7 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(DDL)
     columns = {row[1] for row in conn.execute("PRAGMA table_info(cases)")}
-    if "human_action" not in columns:  # databases created before the API change
-        conn.execute("ALTER TABLE cases ADD COLUMN human_action TEXT")
+    for column in ADDED_CASE_COLUMNS:  # databases created before these columns existed
+        if column not in columns:
+            conn.execute(f"ALTER TABLE cases ADD COLUMN {column} TEXT")
     conn.commit()

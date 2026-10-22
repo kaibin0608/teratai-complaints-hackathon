@@ -98,6 +98,29 @@ class AgentService:
         except Exception:
             log.exception("could not store the run for %s", complaint.complaint_id)
 
+    def reprocess(self, complaint: Complaint, note: str) -> None:
+        """Send back (bonus platform): re-run the agent with the officer's note added to the text."""
+        task = asyncio.create_task(self._rework(complaint, note))
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
+
+    async def _rework(self, complaint: Complaint, note: str) -> None:
+        noted = complaint.model_copy(update={"text": f"{complaint.text}\n\n[Officer note: {note}]"})
+        async with self.gate:
+            began = time.perf_counter()
+            try:
+                run = (await self.pipeline(noted)).model_copy(update={"run_kind": "reprocess"})
+            except Exception as exc:
+                log.exception("send-back re-run crashed on %s", complaint.complaint_id)
+                self.store.reprocess_failed(complaint.complaint_id, f"re-run crashed: {type(exc).__name__}: {exc}")
+                return
+            latency_ms = max(1, int((time.perf_counter() - began) * 1000))
+        try:
+            self.store.save_reprocess(complaint.complaint_id, run, latency_ms)
+        except Exception as exc:
+            log.exception("could not store the re-run for %s", complaint.complaint_id)
+            self.store.reprocess_failed(complaint.complaint_id, f"could not store the re-run: {exc}")
+
     async def idle(self) -> None:
         """Wait for all background work (tests, shutdown)."""
         while self.tasks:
