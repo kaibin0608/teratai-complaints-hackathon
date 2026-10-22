@@ -14,7 +14,8 @@ except ImportError:
     pass
 
 DATA_DIR = ROOT / "data"
-DB_PATH = Path(os.getenv("DB_PATH", ROOT / "backend" / "teratai.db"))
+DB_PATH = Path(os.getenv("DB_PATH", ROOT / "backend" / "teratai.db"))  # batch runs → predictions.csv
+API_DB_PATH = ROOT / os.getenv("API_DB_PATH", "backend/api.db")  # the API server: live round, probes, demo
 INBOX_DIR = Path(os.getenv("INBOX_DIR", ROOT / "inbox"))
 TEAM_NAME = os.getenv("TEAM_NAME", "teratai-team")
 

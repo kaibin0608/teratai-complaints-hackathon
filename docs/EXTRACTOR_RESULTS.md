@@ -115,6 +115,24 @@ Fixes from these runs:
 - **One extraction fell back on rerun (CMP-00423).** Its earlier success came on the retry, and the cache had stored it only under the retry request. The client now also caches a retried success under the first request, so reruns repeat.
 - **SQLite WAL side files** (`*.db-wal`, `*.db-shm`) added to `.gitignore`. They hold case data, and the repo is public.
 
+## API: the organisers' check (b-contract-api)
+
+`uvicorn backend.main:app`, run against a fresh `backend/api.db` with the `.env` models (DeepSeek extraction, Haiku replies), then `python scoring/api_check.py http://127.0.0.1:8000` (2026-10-22). It sends training complaints all at once, the way the hidden test will.
+
+| Run | Score | Contract problems | case_state / sent match the route | Time per complaint | Probes |
+|---|---|---|---|---|---|
+| default, 10 complaints | **100.0** | 0 | 10 / 10 | 4.5 s median, 10.5 s slowest | 9 / 9 pass |
+| `--n 30` | **99.7** | 0 | 30 / 30 | 6.2 s median, 10.4 s slowest | 9 / 9 pass |
+
+The probes cover: health; unknown case → 404; no text → 422; unknown customer → no 5xx; same complaint twice → unchanged; approval case waits unsent; edit with an invented amount → 422 and nothing sent; approve → approved, sent, actor recorded, decision unchanged; second action → 409.
+
+Notes:
+- The 0.3 points lost at 30: two Malay scam complaints with the wrong reply language. That's the "formal Malay read as mixed" issue already listed above.
+- "route WRONG" lines (not scored) are duplicate charges held as `ambiguous_match`.
+- On a reused database, the unknown-customer probe answers 409: the probe reuses the ID `PROBE-UNKNOWN-CUST` with different text on each run. That's correct (same ID, different content) and still passes.
+
+To run it for the organisers: `uvicorn backend.main:app --host 0.0.0.0 --port 8000` (venue Wi-Fi), or put a tunnel such as ngrok or Cloudflare Tunnel in front. Keep it running from the 15:00 freeze until the demo ends.
+
 ## How to reproduce
 
 Needs `OPENROUTER_API_KEY` in `.env`. LLM responses are cached in `backend/.cache/llm_cache.db`, so a rerun with the same prompt and model costs nothing.

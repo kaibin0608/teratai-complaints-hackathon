@@ -456,7 +456,7 @@ Policy answers "what should happen?" given the matched transaction and its evide
 
 Checkpoint 2 (Day 2 12:00) needs decision, reply, approval and write-back on 50 training complaints, `scoring/api_check.py` passing, and our API reachable from the organisers' laptop. All of that must work through the contract API before the UI is finished.
 
-**2.1 The contract API (core, build first; [api.md](api.md))**
+**2.1 The contract API (core, build first; [api.md](api.md))**: built in `backend/api/contract.py` + `backend/main.py`. `scoring/api_check.py` scores 100.0 (10 complaints) / 99.7 (30), 9/9 probes pass ([EXTRACTOR_RESULTS.md](EXTRACTOR_RESULTS.md#api-the-organisers-check-b-contract-api))
 - `POST /complaints`: body = the six complaint fields. Return `202` with `{"complaint_id", "status": "processing"}` and run the agent in the background (bounded worker pool; the hidden test posts 20 at once and allows 120 s each)
   - Missing/empty `complaint_id`, `customer_id`, `received_at` or `text` → `400`/`422`, never `5xx`
   - Same ID again → existing case's status (`200`), no second case, no new decision; same ID with different content → `409`
@@ -467,6 +467,8 @@ Checkpoint 2 (Day 2 12:00) needs decision, reply, approval and write-back on 50 
   - `approve`/`edit_approve` → `approved`, `sent = true`, reply to the outbox; `reject` → `rejected`, nothing sent. `human_action` records action, actor, reason, time and the reply that went out. The agent's decision fields never change
   - Our UI's Approve/Reject buttons call this same endpoint, so the demo and the live round use one path
 - `GET /health` → `200`
+- Extra (not in api.md): `POST /cases/{id}/acknowledge {actor, reason}` lets a fraud analyst release the agent's holding reply (`sent = true`, case stays `with_fraud_team`). The bonus `/api/cases/{id}/acknowledge` should call the same store function
+- The API server keeps its own database (`API_DB_PATH`, default `backend/api.db`), separate from the batch database behind predictions.csv, so probes and demo clicks never touch submission data
 - No credentials on these routes: the organisers' script sends none
 - **Serving:** `uvicorn backend.main:app --host 0.0.0.0 --port 8000` on the venue Wi-Fi, or an ngrok / Cloudflare tunnel. Running from 15:00 until our demo ends. One named person owns keeping it up; LLM keys stay on our side
 - Self-test: `python scoring/api_check.py http://localhost:8000` (add `--n 30` for more complaints)
@@ -725,18 +727,17 @@ backend/
 ├── requirements.txt
 ├── .env.example
 ├── db/
-│   ├── schema.py              # agent_runs, cases, case_events, outbound_messages, users, llm_cache
-│   ├── models.py              # CRUD, role-filtered queries
+│   ├── schema.py              # agent_runs, cases, case_events, outbound_messages (users later; llm_cache lives in backend/.cache)
+│   ├── store.py               # CaseStore: runs, case state, human actions (role-filtered queries later)
 │   └── seed.py                # Demo users (officer, fraud, manager)
 ├── auth/
 │   ├── router.py              # /api/auth/*
 │   ├── jwt.py                 # Token create/verify
 │   └── dependencies.py        # get_current_user, require_role
 ├── api/
-│   ├── contract.py            # docs/api.md: /complaints, /cases/{id}, /cases/{id}/actions, /health (no auth)
+│   ├── contract.py            # docs/api.md: /complaints, /cases/{id}, /cases/{id}/actions, /health (+ /acknowledge); built
 │   ├── cases.py               # Bonus: role-filtered /api/* CRUD + actions
-│   ├── intake.py              # POST new complaint → pipeline
-│   ├── watcher.py             # inbox/ folder watcher → same intake path
+│   ├── watcher.py             # Optional: inbox/ folder watcher → same intake path (not built)
 │   ├── outbound.py            # Gated simulated send
 │   ├── audit.py               # Audit log queries
 │   ├── metrics.py             # KPIs + chart data (manager)
@@ -745,8 +746,9 @@ backend/
 │   └── websocket.py           # Real-time push (bonus)
 ├── llm/
 │   ├── client.py              # LLMClient interface, cache, usage/cost tracking
-│   ├── anthropic_adapter.py
-│   ├── openai_adapter.py
+│   ├── registry.py            # provider:model per step, startup checks
+│   ├── openai_compatible_adapter.py  # OpenRouter or any /chat/completions endpoint
+│   ├── fake_adapter.py        # offline, tests
 │   └── prompts.py             # Versioned extraction + draft prompts
 ├── agent/
 │   ├── pipeline.py            # Orchestrates full flow

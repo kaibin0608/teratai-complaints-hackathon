@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS cases (
     sent              INTEGER NOT NULL DEFAULT 0,
     error             TEXT,
     created_at        TEXT NOT NULL,
-    updated_at        TEXT NOT NULL
+    updated_at        TEXT NOT NULL,
+    human_action      TEXT            -- JSON {action, actor, reason, at, reply_text}; NULL until a person acts
 );
 
 CREATE TABLE IF NOT EXISTS case_events (
@@ -91,4 +92,7 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.execute("PRAGMA busy_timeout = 5000")
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(DDL)
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(cases)")}
+    if "human_action" not in columns:  # databases created before the API change
+        conn.execute("ALTER TABLE cases ADD COLUMN human_action TEXT")
     conn.commit()
