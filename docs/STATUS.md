@@ -1,0 +1,85 @@
+# Status: what's done and what's left
+
+This file tracks progress against [PLAN.md](PLAN.md). When you finish an item, tick it (`[x]`) in the same PR. Owners: **A** is Dev A (decision engine), **B** is Dev B (LLM, pipeline, DB, API), **UI** is the UI developer.
+
+Last updated: 2026-10-23, `dev` at `b136256`.
+
+## Done
+
+- **Agent pipeline** (Phase 1):
+  - LLM extraction (DeepSeek v4 Flash), code matching, policy and refund (engine)
+  - LLM replies (Claude Haiku 5.5), self-check in code, fallbacks when an LLM fails
+- **Accuracy:** training score **99.94** (baseline 31.9), holdout top-1 99.4%, messy-text test set 99.4. Details in [EXTRACTOR_RESULTS.md](EXTRACTOR_RESULTS.md).
+- **Submission file:** `submissions/Santa_Claude/predictions.csv`, 750 valid rows, regenerated with the fixed engine.
+- **Database:**
+  - `agent_runs` is immutable
+  - `cases`
+  - `case_events` (append-only audit)
+  - `outbound_messages` (outbox)
+- **The organisers' contract API** ([api.md](api.md)): `api_check` scores **100.0**, with 9/9 probes. Approve, edit & approve (self-check re-runs), reject, and fraud acknowledge are built.
+- **UI read API** ([UI_API.md](UI_API.md)): `GET /api/cases`, `GET /api/cases/{id}`, `GET /api/metrics`, `GET /api/audit`. CORS is open; there's no login yet.
+- **`backend.bat`:** double-click to start the backend on port 8000.
+
+## Core (main ranking)
+
+- [ ] **C1 · Simple UI:** queues, one case (complaint, transaction, evidence, decision, reply, self-check), Approve / Edit & approve / Reject buttons. Needed for the 10-point human gate. *(UI, in progress; PLAN Phase 3)*
+- [ ] **C2 · API reachable from the organisers' laptop** (venue Wi-Fi or a tunnel), for Checkpoint 2 on Day 2 at 12:00. *(B)*
+- [ ] C3 · Reply-language tweak for formal Malay (about 25 training misses, about 0.07 points). Optional. *(B)*
+
+## Bonus platform backend (PLAN 2.2–2.4)
+
+- [ ] **B1 · Login:** `users` table, 3 seeded users (officer1, fraud1, manager1), `POST /api/auth/login`, `GET /api/auth/me` (JWT). *(B)*
+- [ ] **B2 · Role checks** on every `/api/*` route, and role-filtered queues: the officer sees approval cases, the fraud analyst sees fraud cases, the manager sees all. The contract routes stay open. *(B)*
+- [ ] **B3 · New case fields:** workflow status, final outcome / refund / reply, approved by, sensitive, assigned to, escalated to. *(B)*
+- [ ] **B4 · Officer actions:** approve (limit check), reject, edit reply (self-check, diff, clears the approval), send back (agent re-run), escalate, flag sensitive. *(B)*
+- [ ] **B5 · Manager actions:** second-tier approve / reject, reassign. *(B)*
+- [ ] **B6 · Fraud actions:** log investigation / recall attempt, record outcome (acknowledge is done). *(B)*
+- [ ] **B7 · One send function** for every human-gated send: right role, approved (second tier if escalated), reply passed the self-check, not already sent. *(B)*
+- [ ] **B8 · Agent vs human comparison** for overridden cases. *(B)*
+- [ ] **B9 · More dashboard numbers:**
+  - SLA compliance %
+  - trends over time
+  - approval turnaround
+  - by channel and language
+  - total refunds in RM
+
+  *(B)*
+
+## Bonus screens (PLAN Phase 3, after C1)
+
+- [ ] U1 · Login page, role-based redirect, role-aware menu *(UI)*
+- [ ] U2 · Officer Resolution Desk: limit headroom, "Escalate" instead of "Approve" when over the limit *(UI)*
+- [ ] U3 · Fraud Investigation Workbench: auth method, timeline, acknowledge → investigate → outcome *(UI)*
+- [ ] U4 · Manager Console: tiles, escalation queue, all cases, audit log, agent vs human *(UI)*
+- [ ] U5 · Intake form, for rehearsing. Optional. *(UI)*
+
+## Bonus extras (PLAN Phase 4, only if time is left)
+
+- [ ] X1 · WebSocket live push (`/ws`); polling stays as the fallback *(B + UI)*
+- [ ] X2 · Manager charts (the data is mostly in `/api/metrics`) *(UI)*
+- [ ] X3 · Chatbot panel (`POST /api/chat`, read-only) *(B + UI)*
+- [ ] X4 · SLA timers and notifications *(UI)*
+
+## Small optional backend items
+
+- [ ] O1 · `GET /api/export/predictions` (today: `python -m backend.batch.submit`) *(B)*
+- [ ] O2 · Retry for cases that failed (`status: error`) *(B)*
+- [ ] O3 · `inbox/` folder watcher or CSV-paste intake *(B)*
+
+## Day 2: submission and demo (PLAN Phase 5)
+
+- [ ] S1 · Run `scoring/api_check.py` against the served URL **from another laptop** (before 12:00) *(B)*
+- [ ] S2 · Final rerun of changed test complaints, then regenerate and validate `predictions.csv`, and record the final training score (before 15:00) *(B)*
+- [ ] S3 · `dev` → `main`, then PR `Submission: Santa_Claude` with `predictions.csv`, the freeze commit hash and the API URL (before 15:00) *(B)*
+- [ ] S4 · End-to-end demo test of the 3 flows: within the limit, over the limit → manager, fraud *(all, after B and U)*
+- [ ] S5 · Live-round rehearsal: post example and messy complaints, watch them appear in the UI, approve one *(all, after C1)*
+- [ ] S6 · Fill the demo database with the 750 test cases: `python -m backend.batch.runner --ids test --db backend/api.db` *(B)*
+- [ ] S7 · Keep the server running from 15:00 until the demo; keep the laptop awake *(B)*
+- [ ] S8 · Run guide `docs/RUNNING.md`: start, fill, regenerate, check *(B)*
+
+## Open questions for the bonus (Dev B to decide)
+
+- Is every 65+ customer automatically "sensitive" (always escalated to the manager)? The plan assumes yes.
+- Build "send back" (agent re-run), or skip it?
+- Should the contract route `POST /cases/{id}/actions` stay as it is (typed name, no login, no limits)? Recommended: yes.
+- Which of the B9 numbers to add, and should they go first as a small change for the UI?

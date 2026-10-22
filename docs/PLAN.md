@@ -5,6 +5,8 @@
 
 Backend first, frontend second. Core before bonus, but the data model supports the bonus from day one.
 
+**Progress:** what's done and what's left is tracked in [STATUS.md](STATUS.md).
+
 ## Explainer
 
 **▶ [Watch the Teratai Complaints Explainer](https://claude.ai/artifact/Hk9ZvLQa1ctHfCnexmjjUQ)**: an interactive, narrated walkthrough of the brief and this plan (animated scenes, voice-over, live captions; pick any chapter or scene from the list on the page).
