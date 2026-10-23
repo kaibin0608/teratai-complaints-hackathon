@@ -2,15 +2,15 @@
 
 This file tracks progress against [PLAN.md](PLAN.md). When you finish an item, tick it (`[x]`) in the same PR. Owners: **A** is Dev A (decision engine), **B** is Dev B (LLM, pipeline, DB, API), **UI** is the UI developer.
 
-Last updated: 2026-10-23, after `a-reply-language` (branch `feat/a-reply-language`).
+Last updated: 2026-10-23, after the S2 regeneration (`665f3bc`).
 
 ## Done
 
 - **Agent pipeline** (Phase 1):
   - LLM extraction (DeepSeek v4 Flash), code matching, policy and refund (engine)
   - LLM replies (Claude Haiku 5.5), self-check in code, fallbacks when an LLM fails
-- **Accuracy:** training score **99.94** (baseline 31.9), holdout top-1 99.4%, messy-text test set 99.4. Details in [EXTRACTOR_RESULTS.md](EXTRACTOR_RESULTS.md).
-- **Submission file:** `submissions/Santa_Claude/predictions.csv`, 750 valid rows, regenerated with the fixed engine.
+- **Accuracy:** training score **100.00** (baseline 31.9), holdout top-1 99.4%, messy-text test set 99.4. Details in [EXTRACTOR_RESULTS.md](EXTRACTOR_RESULTS.md).
+- **Submission file:** `submissions/Santa_Claude/predictions.csv`, 750 valid rows, regenerated with the reply-language fix (S2).
 - **Database:**
   - `agent_runs` is immutable
   - `cases`
@@ -77,8 +77,8 @@ Last updated: 2026-10-23, after `a-reply-language` (branch `feat/a-reply-languag
 
 ## Day 2: submission and demo (PLAN Phase 5)
 
-- [ ] S1 · Run `scoring/api_check.py` against the served URL **from another laptop** (before 12:00) *(B)*
-- [ ] S2 · Final rerun of changed test complaints, then regenerate and validate `predictions.csv`, and record the final training score (before 15:00) *(B)*
+- [ ] S1 · Run `scoring/api_check.py` against the served URL **from another laptop** (before 12:00) *(B)*. From the serving laptop over Wi-Fi (`http://10.0.30.131:8000`, `main` at `665f3bc`): 100.0, 9/9 probes; 20 at once 100.0, slowest 6.2s. The other-laptop run is still to do.
+- [x] S2 · Final rerun of changed test complaints, then regenerate and validate `predictions.csv`, and record the final training score (before 15:00) *(B)*. `665f3bc`: 750/750 valid; scored fields unchanged except reply_language on 12 rows (C3); RM0.0136. Final training score **100.00** (1,750 complaints, 0 critical errors).
 - [ ] S3 · `dev` → `main`, then PR `Submission: Santa_Claude` with `predictions.csv`, the freeze commit hash and the API URL (before 15:00) *(B)*
 - [ ] S4 · End-to-end demo test of the 3 flows: within the limit, over the limit → manager, fraud *(all, after B and U)*
 - [ ] S5 · Live-round rehearsal: post example and messy complaints, watch them appear in the UI, approve one *(all, after C1)*
