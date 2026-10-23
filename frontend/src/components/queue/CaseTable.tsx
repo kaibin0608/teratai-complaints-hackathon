@@ -1,7 +1,7 @@
 import { Flag, LoaderCircle, PenLine, TriangleAlert } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { Badge } from '@/components/shared/Badge'
-import { CategoryBadge } from '@/components/shared/CategoryBadge'
+import { CategoryTag } from '@/components/shared/CategoryTag'
 import { HoldBadge } from '@/components/shared/HoldBadge'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { QueueBadge } from '@/components/shared/QueueBadge'
@@ -9,7 +9,6 @@ import { SelfCheckBadge } from '@/components/shared/SelfCheckBadge'
 import { SLATimer } from '@/components/shared/SLATimer'
 import { VulnerableBadge } from '@/components/shared/VulnerableBadge'
 import { WorkflowBadge } from '@/components/shared/WorkflowBadge'
-import { cx } from '@/lib/cx'
 import { actionLabel } from '@/lib/events'
 import { formatIsoTime, formatMoney } from '@/lib/format'
 import { holdReasonLabel, outcomeLabel } from '@/lib/labels'
@@ -17,23 +16,7 @@ import { paths } from '@/lib/paths'
 import type { CaseListItem } from '@/lib/types'
 import { useNameOf } from '@/hooks/useNameOf'
 
-/*
- * Below 1360 px the Self-check column is dropped; a flagged reply still shows in the Status cell.
- * Tailwind only generates classes it can read literally, so these are written out in full.
- */
-const WIDE_ONLY_CELL = 'hidden min-[1360px]:table-cell'
-const NARROW_ONLY = 'min-[1360px]:hidden'
-
-const COLUMNS: readonly { label: string; wideOnly?: boolean }[] = [
-  { label: 'Priority' },
-  { label: 'Case' },
-  { label: 'Customer' },
-  { label: 'Category' },
-  { label: 'Decision' },
-  { label: 'Status' },
-  { label: 'Self-check', wideOnly: true },
-  { label: 'Resolve SLA' },
-]
+const COLUMNS = ['Priority', 'Case', 'Customer', 'Category', 'Decision', 'Status', 'Resolve SLA'] as const
 
 export function CaseTable({ items }: { items: readonly CaseListItem[] }) {
   return (
@@ -41,12 +24,8 @@ export function CaseTable({ items }: { items: readonly CaseListItem[] }) {
       <table className="w-full text-sm">
         <thead className="bg-subtle text-left text-xs text-secondary">
           <tr>
-            {COLUMNS.map(({ label, wideOnly }) => (
-              <th
-                key={label}
-                scope="col"
-                className={cx('px-cell-x py-cell-y font-medium whitespace-nowrap', wideOnly && WIDE_ONLY_CELL)}
-              >
+            {COLUMNS.map((label) => (
+              <th key={label} scope="col" className="px-cell-x py-cell-y font-medium whitespace-nowrap">
                 {label}
               </th>
             ))}
@@ -90,21 +69,21 @@ function CaseRow({ item }: { item: CaseListItem }) {
       </td>
 
       {item.status === 'processing' ? (
-        <td colSpan={5} className="px-cell-x py-cell-y text-secondary">
+        <td colSpan={4} className="px-cell-x py-cell-y text-secondary">
           <span className="inline-flex items-center gap-2">
             <LoaderCircle size={14} aria-hidden className="animate-spin" />
             Agent is working on it
           </span>
         </td>
       ) : item.status === 'error' ? (
-        <td colSpan={5} className="px-cell-x py-cell-y">
+        <td colSpan={4} className="px-cell-x py-cell-y">
           <Badge tone="error" icon={TriangleAlert}>
             The agent could not finish this case
           </Badge>
         </td>
       ) : (
         <>
-          <td className="px-cell-x py-cell-y">{item.category && <CategoryBadge category={item.category} />}</td>
+          <td className="px-cell-x py-cell-y">{item.category && <CategoryTag category={item.category} />}</td>
           <td className="px-cell-x py-cell-y whitespace-nowrap">
             {item.outcome ? (
               <>
@@ -120,12 +99,9 @@ function CaseRow({ item }: { item: CaseListItem }) {
           <td className="px-cell-x py-cell-y">
             <StatusCell item={item} />
           </td>
-          <td className={cx('px-cell-x py-cell-y', WIDE_ONLY_CELL)}>
-            {item.self_check && <SelfCheckBadge result={item.self_check} compact />}
-          </td>
           <td className="px-cell-x py-cell-y whitespace-nowrap">
             {open && item.resolve_due_at ? (
-              <SLATimer start={item.received_at} due={item.resolve_due_at} />
+              <SLATimer start={item.received_at} due={item.resolve_due_at} plain />
             ) : (
               <span className="text-secondary">—</span>
             )}
@@ -156,11 +132,7 @@ function StatusCell({ item }: { item: CaseListItem }) {
           Changed by people
         </Badge>
       )}
-      {item.self_check === 'flagged' && (
-        <div className={NARROW_ONLY}>
-          <SelfCheckBadge result="flagged" />
-        </div>
-      )}
+      {item.self_check === 'flagged' && <SelfCheckBadge result="flagged" />}
       {(item.workflow || item.hold_reason) && (
         <div className="flex flex-wrap gap-1">
           {item.workflow && <WorkflowBadge workflow={item.workflow} />}

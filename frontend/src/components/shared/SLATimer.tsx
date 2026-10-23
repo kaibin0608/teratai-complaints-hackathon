@@ -17,10 +17,12 @@ interface SLATimerProps {
   label?: string
   /** When the deadline was met (e.g. first acknowledgement); stops the countdown. */
   doneAt?: IsoTime | null
+  /** Plain coloured text instead of a pill: for long lists where a column of red pills is too loud. */
+  plain?: boolean
 }
 
 /** Live countdown against the current time; once done, shows whether the deadline was met. */
-export function SLATimer({ start, due, label, doneAt }: SLATimerProps) {
+export function SLATimer({ start, due, label, doneAt, plain }: SLATimerProps) {
   if (doneAt) {
     const late = mytToMs(doneAt) > mytToMs(due)
     return (
@@ -29,13 +31,27 @@ export function SLATimer({ start, due, label, doneAt }: SLATimerProps) {
       </Badge>
     )
   }
-  return <Countdown start={start} due={due} label={label} />
+  return <Countdown start={start} due={due} label={label} plain={plain} />
 }
 
-function Countdown({ start, due, label }: Omit<SLATimerProps, 'doneAt'>) {
+const plainClass: Record<SlaState, string> = {
+  on_track: 'text-success-700',
+  at_risk: 'font-medium text-warning-800',
+  breached: 'font-medium text-error-700',
+}
+
+function Countdown({ start, due, label, plain }: Omit<SLATimerProps, 'doneAt'>) {
   const now = useNow()
   const { state, remainingMs } = slaStatus(start, due, mytToMs(now))
   const time = formatDuration(remainingMs)
+  if (plain) {
+    return (
+      <span title={`${label ?? 'Deadline'} due ${formatIsoTime(due)}`} className={`inline-flex items-center gap-1 text-xs tabular-nums ${plainClass[state]}`}>
+        <AlarmClock size={12} aria-hidden />
+        {withLabel(label, state === 'breached' ? `${time} overdue` : `${time} left`)}
+      </span>
+    )
+  }
   return (
     <Badge tone={stateTone[state]} icon={AlarmClock} title={`${label ?? 'Deadline'} due ${formatIsoTime(due)}`}>
       {withLabel(label, state === 'breached' ? `overdue ${time}` : `${time} left`)}

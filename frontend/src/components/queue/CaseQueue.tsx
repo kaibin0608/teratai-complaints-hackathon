@@ -58,27 +58,28 @@ export function CaseQueue({ tabs }: { tabs: readonly Queue[] }) {
         showChanged={auth.status === 'signed_in' && auth.user.role === 'manager'}
         onChange={change}
         onClear={clear}
+        trailing={
+          <>
+            <div role="group" aria-label="Sort" className="flex rounded-control border border-default p-0.5">
+              {SORTS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={params.sort === value}
+                  onClick={() => change('sort', value)}
+                  className={cx(
+                    'rounded-control px-2.5 py-1 text-xs font-medium transition-colors',
+                    params.sort === value ? 'bg-neutral-100 text-primary' : 'text-secondary hover:text-primary',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <LiveIndicator result={result} />
+          </>
+        }
       />
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div role="group" aria-label="Sort" className="flex rounded-control border border-default p-0.5">
-          {SORTS.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={params.sort === value}
-              onClick={() => change('sort', value)}
-              className={cx(
-                'rounded-control px-2.5 py-1 text-xs font-medium transition-colors',
-                params.sort === value ? 'bg-neutral-100 text-primary' : 'text-secondary hover:text-primary',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <LiveIndicator result={result} />
-      </div>
 
       <QueueBody
         result={result}
