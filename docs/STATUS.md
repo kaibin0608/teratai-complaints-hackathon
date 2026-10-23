@@ -2,7 +2,7 @@
 
 This file tracks progress against [PLAN.md](PLAN.md). When you finish an item, tick it (`[x]`) in the same PR. Owners: **A** is Dev A (decision engine), **B** is Dev B (LLM, pipeline, DB, API), **UI** is the UI developer.
 
-Last updated: 2026-10-23, after the frontend merge (`88d1e2f`).
+Last updated: 2026-10-23 14:40, after the submission PR (#1, freeze `eadb769`) and the second-issue quote on the case page (`d2565ac`).
 
 ## Done
 
@@ -11,6 +11,7 @@ Last updated: 2026-10-23, after the frontend merge (`88d1e2f`).
   - LLM replies (Claude Haiku 5.5), self-check in code, fallbacks when an LLM fails
 - **Accuracy:** training score **100.00** (baseline 31.9), holdout top-1 99.4%, messy-text test set 99.4. Details in [EXTRACTOR_RESULTS.md](EXTRACTOR_RESULTS.md).
 - **Submission file:** `submissions/Santa_Claude/predictions.csv`, 750 valid rows, regenerated with the reply-language fix (S2).
+- **Submitted (S3):** [PR #1 `Submission: Santa_Claude`](https://github.com/DM-Data-Science/teratai-complaints-hackathon/pull/1), opened 14:22. It adds only `predictions.csv`; freeze commit `eadb769ff3f141f16aabf191a99863c5a98b4b17` (`main` = `dev` at the merge); API URL `http://10.0.30.131:8000`.
 - **Database:**
   - `agent_runs` is immutable
   - `cases`
@@ -18,8 +19,8 @@ Last updated: 2026-10-23, after the frontend merge (`88d1e2f`).
   - `outbound_messages` (outbox)
 - **The organisers' contract API** ([api.md](api.md)): `api_check` scores **100.0**, with 9/9 probes. Approve, edit & approve (self-check re-runs), reject, and fraud acknowledge are built.
 - **UI read API** ([UI_API.md](UI_API.md)): `GET /api/cases`, `GET /api/cases/{id}`, `GET /api/metrics`, `GET /api/audit`. CORS is open; there's no login yet.
-- **`backend.bat`:** double-click to start the backend on port 8000.
-- **Frontend** (`frontend/`, merged in `88d1e2f`): React 19 + TypeScript + Vite + Tailwind. Covers C1 and U1–U5, plus charts and SLA timers. Run it with `cd frontend`, `npm install`, `npm run dev` (http://localhost:5173). It typechecks and builds, and its 88 unit tests pass. **It has not been tested end to end against the backend yet (S4, S5).**
+- **`backend.bat`** and **`frontend.bat`:** double-click to start the backend (port 8000) and the frontend (port 5173, reachable from other laptops on the same Wi-Fi).
+- **Frontend** (`frontend/`, merged in `88d1e2f`): React 19 + TypeScript + Vite + Tailwind. Covers C1 and U1–U5, plus charts and SLA timers. Run it with `cd frontend`, `npm install`, `npm run dev` (http://localhost:5173). It typechecks and builds, and its 88 unit tests pass. Since then: a calmer Manager Console with tabs, new charts, and tidier Cases, Intake, Policy, Audit and sign-in pages (Arceus1010). Every `/api/metrics` and `/api/cases` field the screens read was checked against the running backend. **The three demo flows have not been run end to end yet (S4, S5).**
 - **Bonus platform backend** (B1–B9, `b-ops-platform`):
   - logins for 4 seeded users, role-filtered reads
   - two-tier approval (officers RM2,000, fraud RM5,000, 65+ always to the manager)
@@ -30,8 +31,8 @@ Last updated: 2026-10-23, after the frontend merge (`88d1e2f`).
 
 ## Core (main ranking)
 
-- [x] **C1 · Simple UI:** queues, one case (complaint, transaction, evidence, decision, reply, self-check), Approve / Edit & approve / Reject buttons. Needed for the 10-point human gate. *(UI, `feat/frontend-foundation`; end-to-end check is S4)* The case page does not yet show `other_issues` (the second-issue quote).
-- [ ] **C2 · API reachable from the organisers' laptop** (venue Wi-Fi or a tunnel), for Checkpoint 2 on Day 2 at 12:00. *(B)*
+- [x] **C1 · Simple UI:** queues, one case (complaint, transaction, evidence, decision, reply, self-check), Approve / Edit & approve / Reject buttons. Needed for the 10-point human gate. *(UI, `feat/frontend-foundation`; end-to-end check is S4)* The case page shows the second issue's quote under the complaint (`d2565ac`).
+- [ ] **C2 · API reachable from the organisers' laptop** (venue Wi-Fi or a tunnel), for Checkpoint 2 on Day 2 at 12:00. *(B)* `http://10.0.30.131:8000/health` answered at 14:21 and is the URL in the submission PR; S1 passed from a teammate's laptop. Tick when the organisers confirm they reached it.
 - [x] C3 · Reply-language fix: `agent/language_mix.py` checks the LLM's mixed-language flag in code (no English word → not mixed; LLM says not mixed but English + Malay words → mixed). Training reply_language 98.4% → 100%, score 99.92 → 100.00 on the same cached clues; messy set unchanged; 8 of 750 test replies change language, each matching a labelled training pattern. **Regenerate `predictions.csv` (S2) to pick it up.** *(A, `feat/a-reply-language`)*
 - [x] C4 · `categories/fee.py` fee-type match fixed: changed `any()` to `all()` for word matching, so "debit card annual fee" no longer matches "credit card annual fee". CMP-00010 now confidently matches the correct transaction. 2,334 tests pass. *(A, `feat/a-fee-type-fix`)*
 - [x] C5 · **Second-issue check** (`b-second-issue`): a complaint raising a second, different problem is held for an officer ("Complaint raises a second issue"); the reply mentions it in one sentence. LLM issues check plus code quote verification; final test half 16/16 caught, 0 false flags on 2,604 complaints; scores unchanged. Kill switch `LLM_ISSUES=off`. *(B, agreed with A)*
@@ -75,18 +76,23 @@ Last updated: 2026-10-23, after the frontend merge (`88d1e2f`).
 
 - [ ] O1 · `GET /api/export/predictions` (today: `python -m backend.batch.submit`) *(B)*
 - [ ] O2 · Retry for cases that failed (`status: error`) *(B)*
-- [ ] O3 · `inbox/` folder watcher or CSV-paste intake *(B)*
+- [x] O3 · `inbox/` folder watcher or CSV-paste intake *(B)* Done as CSV paste on the Intake page (live-round format, posts to `/complaints`); no folder watcher.
 
 ## Day 2: submission and demo (PLAN Phase 5)
 
 - [x] S1 · Run `scoring/api_check.py` against the served URL **from another laptop** (before 12:00) *(B)*. From a teammate's laptop on the venue Wi-Fi (`http://10.0.30.131:8000`, `main` at `90c31c8`, started with `backend.bat`): 100.0, 9/9 probes, slowest 4.7s. From the serving laptop, 20 at once: 100.0, slowest 6.2s.
 - [x] S2 · Final rerun of changed test complaints, then regenerate and validate `predictions.csv`, and record the final training score (before 15:00) *(B)*. `665f3bc`: 750/750 valid; scored fields unchanged except reply_language on 12 rows (C3); RM0.0136. Final training score **100.00** (1,750 complaints, 0 critical errors).
-- [ ] S3 · `dev` → `main`, then PR `Submission: Santa_Claude` with `predictions.csv`, the freeze commit hash and the API URL (before 15:00) *(B)* Steps, PR link and description: [SUBMISSION.md](SUBMISSION.md). The branch `submission/Santa_Claude` is pushed (only the predictions file); the PR is not opened yet.
+- [x] S3 · `dev` → `main`, then PR `Submission: Santa_Claude` with `predictions.csv`, the freeze commit hash and the API URL (before 15:00) *(B)* `main` fast-forwarded to `dev` (`eadb769`) and pushed; [PR #1](https://github.com/DM-Data-Science/teratai-complaints-hackathon/pull/1) opened 14:22 with 1 file. Later `dev` commits are frontend-only, so the freeze hash stays `eadb769`. Don't merge, close or push to the PR branch.
 - [ ] S4 · End-to-end demo test of the 3 flows: within the limit, over the limit → manager, fraud *(all, after B and U)*
 - [ ] S5 · Live-round rehearsal: post example and messy complaints, watch them appear in the UI, approve one *(all, after C1)*
 - [x] S6 · Fill the demo database with the 750 test cases: `python -m backend.batch.runner --ids test --db backend/api.db` *(B)*. Done on the server laptop: 800 cases (750 test + 50 from api_check), 0 errors; queues 304 awaiting approval, 158 fraud, 335 auto-resolved. Loaded from the cache, so the dashboard's cost and latency tiles read near zero: quote ~RM0.001 and ~4 s per complaint in the demo
 - [ ] S7 · Keep the server running from 15:00 until the demo; keep the laptop awake *(B)*
 - [x] S8 · Run guide [RUNNING.md](RUNNING.md): setup, start, make reachable (Wi-Fi or tunnel), check, fill the demo database, regenerate the submission, recovery table, logins, submission steps *(B)*
+
+## Known gaps (not blocking)
+
+- The **"Mixed EN/MS" tag** on the case page's Complaint card shows the LLM's raw `is_mixed_language`, not the code-corrected flag (`language_mix.check_mixed`) the reply language uses. On the ~79 complaints where code overruled the LLM, the tag can say Mixed while the reply correctly used the complaint's language. Cosmetic; a proper fix needs the backend to send the corrected flag, so after the freeze only.
+- **Reply-language tests:** mixed → preferred language is tested, but the call-centre-note path and the unknown-customer fallback have no unit test (both behave correctly on the training data).
 
 ## Bonus decisions (Dev B, 2026-10-23)
 
