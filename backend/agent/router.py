@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal
 
+from backend.agent.language_mix import check_mixed
 from backend.agent.tools import get_auto_refund_limit, get_customer, get_db
 from backend.contracts import Clues, Complaint, Decision, HoldReason, Priority
 from starter.data import age_on
@@ -36,7 +37,8 @@ def compute_vulnerable(complaint: Complaint) -> bool:
 
 def compute_language(clues: Clues, complaint: Complaint) -> str:
     customer = get_customer(complaint.customer_id)
-    if customer and (clues.is_mixed_language or complaint.is_staff_note):
+    mixed = check_mixed(clues.is_mixed_language, complaint.text)
+    if customer and (mixed or complaint.is_staff_note):
         return customer.get("preferred_language", clues.language)
     return clues.language
 
