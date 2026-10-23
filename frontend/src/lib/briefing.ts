@@ -46,11 +46,15 @@ export function buildBriefing(detail: CaseDetail): Briefing {
   const category = categoryLabel[decision.category]
   const checkPassed = reply?.self_check ? reply.self_check.passed : null
   const myself = c.queue === 'auto_resolved'
+  // Still waiting for a person: only then does "sensitive, needs the manager" apply.
+  const waiting = (c.queue === 'awaiting_approval' || c.queue === 'with_fraud_team') && c.workflow !== 'closed'
 
   const understood = `I read this complaint as “${category}”${clues?.amount_mentioned ? `, about ${formatMoney(clues.amount_mentioned)}` : ''}, written in ${LANGUAGE[decision.reply_language]}.`
   const found = txn
     ? `I matched transaction ${txn.txn_id} (${formatMoney(txn.amount_myr)}) and applied rule ${decision.rule_id}: ${decision.calculation.explanation}.`
-    : match && match.candidates.length > 1
+    : isServiceComplaint(detail)
+      ? `No transaction is involved in a service complaint. Rule ${decision.rule_id}: ${decision.calculation.explanation}.`
+      : match && match.candidates.length > 1
       ? `I couldn’t tell which of ${match.candidates.length} transactions the customer means, so I did not choose one.`
       : `I couldn’t find a matching transaction. Rule ${decision.rule_id}: ${decision.calculation.explanation}.`
   const recommend =
@@ -61,7 +65,7 @@ export function buildBriefing(detail: CaseDetail): Briefing {
     const why = whyAPerson(detail)
     return why ? `It goes to ${routeLabel[decision.route].toLowerCase()}. ${why}` : `It goes to ${routeLabel[decision.route].toLowerCase()}.`
   })()
-  const sensitive = c.sensitive ? `This case is marked sensitive${c.sensitive_reason ? ` (${c.sensitive_reason})` : ''}, so it needs the manager.` : null
+  const sensitive = c.sensitive && waiting ? `This case is marked sensitive${c.sensitive_reason ? ` (${c.sensitive_reason})` : ''}, so it needs the manager.` : null
   const check = checkPassed === null ? null : checkPassed ? 'My draft reply passed the self-check.' : 'My draft reply did not pass the self-check, so it can’t be sent as it is.'
 
   return {
@@ -69,6 +73,9 @@ export function buildBriefing(detail: CaseDetail): Briefing {
     steps: buildSteps(detail),
   }
 }
+
+/** Service-quality complaints (staff, app, branch) never involve a transaction: no match is the expected result. */
+const isServiceComplaint = (detail: CaseDetail): boolean => detail.decision?.category === 'SERVICE_QUALITY'
 
 /** The agent's work in order, each step with what it found. */
 export function buildSteps(detail: CaseDetail): TraceStep[] {
@@ -86,8 +93,12 @@ export function buildSteps(detail: CaseDetail): TraceStep[] {
     },
     {
       label: 'Found the transaction',
-      detail: txn ? `${txn.txn_id}, ${formatMoney(txn.amount_myr)}.` : match && match.candidates.length > 1 ? `${match.candidates.length} possible matches; none chosen.` : 'No match found.',
-      state: txn ? 'done' : 'check',
+      detail: txn
+        ? `${txn.txn_id}, ${formatMoney(txn.amount_myr)}.`
+        : isServiceComplaint(detail)
+          ? 'None needed: a service complaint has no transaction.'
+          : match && match.candidates.length > 1 ? `${match.candidates.length} possible matches; none chosen.` : 'No match found.',
+      state: txn || isServiceComplaint(detail) ? 'done' : 'check',
     },
     { label: 'Applied the policy', detail: `${decision.rule_id}: ${decision.calculation.explanation}.`, state: 'done' },
   ]

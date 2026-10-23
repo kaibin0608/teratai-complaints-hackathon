@@ -1,6 +1,6 @@
 import { ArrowRight, CircleAlert, CircleCheck, Clock, Flag, TriangleAlert, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router'
-import { mytToMs, now } from '@/lib/clock'
+import { mytToMs, slaNowMs } from '@/lib/clock'
 import { cx } from '@/lib/cx'
 import { formatDuration } from '@/lib/format'
 import { paths } from '@/lib/paths'
@@ -28,7 +28,7 @@ export function NeedsYou() {
   const metrics = useMetrics()
   if (work.status !== 'success') return null
 
-  const nowMs = mytToMs(now())
+  const nowMs = slaNowMs()  // deadlines on the complaints' calendar (lib/clock.ts)
   const summary = summariseWork(work.data.items, nowMs)
   const escalated = work.data.workflow_counts?.escalated ?? 0
   const failed = metrics.status === 'success' ? metrics.data.cases.by_queue.error : 0

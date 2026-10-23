@@ -1,6 +1,6 @@
 import { AlarmClock, CircleCheck } from 'lucide-react'
 import { useNow } from '@/hooks/useNow'
-import { mytToMs } from '@/lib/clock'
+import { mytToMs, toSlaTime } from '@/lib/clock'
 import { formatDuration, formatIsoTime } from '@/lib/format'
 import { slaStatus, type SlaState } from '@/lib/sla'
 import type { IsoTime } from '@/lib/types'
@@ -41,7 +41,7 @@ const plainClass: Record<SlaState, string> = {
 }
 
 function Countdown({ start, due, label, plain }: Omit<SLATimerProps, 'doneAt'>) {
-  const now = useNow()
+  const now = toSlaTime(useNow())  // deadlines run on the complaints' calendar (lib/clock.ts)
   const { state, remainingMs } = slaStatus(start, due, mytToMs(now))
   const time = formatDuration(remainingMs)
   if (plain) {

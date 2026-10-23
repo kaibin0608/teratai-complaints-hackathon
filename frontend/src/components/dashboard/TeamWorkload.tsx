@@ -3,7 +3,7 @@ import { Card } from '@/components/shared/Card'
 import { useNameOf } from '@/hooks/useNameOf'
 import { useOpenWork } from '@/hooks/useOpenWork'
 import { useUsers } from '@/hooks/useUsers'
-import { now, mytToMs } from '@/lib/clock'
+import { slaNowMs } from '@/lib/clock'
 import { cx } from '@/lib/cx'
 import { roleLabel } from '@/lib/labels'
 import { paths } from '@/lib/paths'
@@ -16,7 +16,7 @@ export function TeamWorkload() {
   const nameOf = useNameOf()
   if (work.status !== 'success' || users.status !== 'success') return <Card title="Team workload">{null}</Card>
 
-  const { byPerson } = summariseWork(work.data.items, mytToMs(now()))
+  const { byPerson } = summariseWork(work.data.items, slaNowMs())
   const staff = users.data.filter((user) => user.role !== 'manager')
   const unassigned = byPerson.get(null)
   const head = 'px-cell-x py-cell-y font-medium'
