@@ -103,16 +103,16 @@
   --color-info-800: #0e3069;
   --color-info-900: #0a2148;
 
-  /* Data visualisation — categorical, in this fixed order. Passes scripts/validate_palette.js (lightness band,
+  /* Data visualisation — categorical, in this fixed order, anchored on the brand pink (brand-600). Passes scripts/validate_palette.js (lightness band,
      chroma floor, adjacent CVD separation, normal-vision floor); contrast on white is below 3:1 for several of them,
      so every mark also has a visible label or a table view. */
-  --color-chart-1: #27a698;
-  --color-chart-2: #8a6dd3;
-  --color-chart-3: #e38e28;
-  --color-chart-4: #4c7fe0;
-  --color-chart-5: #d55c88;
-  --color-chart-6: #889b3c;
-  --color-chart-7: #41a5d3;
+  --color-chart-1: #cc2f63;
+  --color-chart-2: #3f6fd8;
+  --color-chart-3: #e8913a;
+  --color-chart-4: #7a4fa8;
+  --color-chart-5: #1f9d8f;
+  --color-chart-6: #b8962e;
+  --color-chart-7: #3aa0c8;
 
   /* Semantic — surfaces: bg-page, bg-card, bg-subtle, bg-selected, bg-inverse.
      The sidebar sits on bg-page with no border; only the content panel (bg-card) is bordered. */
