@@ -2,7 +2,7 @@
 
 This file tracks progress against [PLAN.md](PLAN.md). When you finish an item, tick it (`[x]`) in the same PR. Owners: **A** is Dev A (decision engine), **B** is Dev B (LLM, pipeline, DB, API), **UI** is the UI developer.
 
-Last updated: 2026-10-23 14:40, after the submission PR (#1, freeze `eadb769`) and the second-issue quote on the case page (`d2565ac`).
+Last updated: 2026-10-23 15:30, after the case assistant (X3, `feat/a-chatbot`). Earlier: the submission PR (#1, freeze `eadb769`) and the second-issue quote on the case page (`d2565ac`).
 
 ## Done
 
@@ -69,7 +69,7 @@ Last updated: 2026-10-23 14:40, after the submission PR (#1, freeze `eadb769`) a
 
 - [ ] X1 · WebSocket live push (`/ws`); polling stays as the fallback *(B + UI)*
 - [x] X2 · Manager charts (the data is mostly in `/api/metrics`) *(UI)*
-- [ ] X3 · Chatbot panel (`POST /api/chat`, read-only) *(B + UI)*
+- [x] X3 · Chatbot panel (`POST /api/chat`, read-only) *(A, `feat/a-chatbot`)* "Ask about this case" card on the case page. Runs as its own service: **double-click `chat.bat`** (port 8001) after `backend.bat`; the frontend forwards `/api/chat` to it. It reads the API's database read-only, so the frozen API on 8000 needs no restart. Answers come from the stored case, the policy CSVs and code-computed approval authority (`who_can_act`); about RM0.002 and 2 s per answer with Haiku 5.5. If it isn't running, the card says so and the rest of the UI is unaffected.
 - [ ] X4 · SLA timers and notifications *(UI)* SLA timers are built (case page, queues, dashboard tiles); notifications are not.
 
 ## Small optional backend items
