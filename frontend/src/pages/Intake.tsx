@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { IntakeForm } from '@/components/intake/IntakeForm'
+import { IntakeGuide } from '@/components/intake/IntakeGuide'
 import { IntakePaste } from '@/components/intake/IntakePaste'
 import { SubmissionList } from '@/components/intake/SubmissionList'
 import { Page } from '@/components/layout/Page'
@@ -19,18 +20,23 @@ export function Intake() {
 
   return (
     <Page title="Intake">
-      <div className="flex flex-col gap-section">
-        <Tabs
-          label="How to enter the complaint"
-          value={mode}
-          onChange={setMode}
-          items={[
-            { value: 'form', label: 'Form' },
-            { value: 'paste', label: 'Paste CSV rows' },
-          ]}
-        />
-        {mode === 'form' ? <IntakeForm disabled={sending} onSubmit={submit} /> : <IntakePaste disabled={sending} onSubmit={submit} />}
-        <SubmissionList submissions={submissions} />
+      <div className="grid items-start gap-section xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="flex flex-col gap-4">
+          <Tabs
+            label="How to enter the complaint"
+            value={mode}
+            onChange={setMode}
+            items={[
+              { value: 'form', label: 'One complaint' },
+              { value: 'paste', label: 'Paste CSV rows' },
+            ]}
+          />
+          {mode === 'form' ? <IntakeForm disabled={sending} onSubmit={submit} /> : <IntakePaste disabled={sending} onSubmit={submit} />}
+        </div>
+        <div className="flex flex-col gap-section">
+          <IntakeGuide />
+          <SubmissionList submissions={submissions} />
+        </div>
       </div>
     </Page>
   )

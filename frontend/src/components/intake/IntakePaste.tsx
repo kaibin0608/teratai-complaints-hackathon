@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { Send } from 'lucide-react'
 import { Button } from '@/components/shared/Button'
+import { Card } from '@/components/shared/Card'
 import { TextArea } from '@/components/shared/TextArea'
 import { parseIntakeCsv } from '@/lib/intake'
 import type { ComplaintInput } from '@/lib/types'
@@ -19,7 +21,8 @@ export function IntakePaste({ disabled, onSubmit }: IntakePasteProps) {
   const empty = text.trim() === ''
 
   return (
-    <div className="flex max-w-2xl flex-col gap-4">
+    <Card title="Paste CSV rows">
+    <div className="flex flex-col gap-4">
       <TextArea
         label="CSV rows"
         rows={7}
@@ -44,7 +47,7 @@ export function IntakePaste({ disabled, onSubmit }: IntakePasteProps) {
         </p>
       )}
 
-      <div>
+      <div className="flex justify-end border-t border-subtle pt-4">
         <Button
           variant="primary"
           disabled={disabled || complaints.length === 0 || errors.length > 0}
@@ -53,9 +56,11 @@ export function IntakePaste({ disabled, onSubmit }: IntakePasteProps) {
             setText('')
           }}
         >
+          <Send size={16} aria-hidden />
           Send {complaints.length > 1 ? `${complaints.length} complaints` : 'to the agent'}
         </Button>
       </div>
     </div>
+    </Card>
   )
 }
