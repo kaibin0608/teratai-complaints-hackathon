@@ -71,6 +71,7 @@ export function makeCase(o: CaseOptions = {}): CaseDetail {
       resolve_due_at: '2026-09-10T10:00:00',
     },
     evidence: { matched_txn: txn, related_txns: [], reversal: null, atm_journal: null, fee_schedule_row: null, allowed_txn_ids: [txn.txn_id], allowed_amounts: [] },
+    other_issues: [],
     reply: {
       text: 'reply',
       redraft_count: 0,

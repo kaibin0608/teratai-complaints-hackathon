@@ -68,6 +68,7 @@ export const holdReasonLabel: Record<HoldReason, string> = {
   self_check_failed: 'Self-check failed',
   unknown_auth_method: 'Unknown auth method',
   llm_error: 'LLM error',
+  second_issue: 'Second issue',
 }
 
 /** What a held case means for the reviewer. */
@@ -79,6 +80,7 @@ export const holdReasonHelp: Record<HoldReason, string> = {
   self_check_failed: 'The drafted reply mentions an ID or amount that is not in the evidence. Edit the reply before sending.',
   unknown_auth_method: 'The card payment used an authentication method the policy does not cover. Never refund automatically.',
   llm_error: 'The language model failed on this complaint. Handle it manually.',
+  second_issue: 'The complaint raises a second problem as well. Deal with it too before closing the case.',
 }
 
 export const matchStatusLabel: Record<MatchStatus, string> = {

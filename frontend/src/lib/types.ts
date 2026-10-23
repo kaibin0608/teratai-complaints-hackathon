@@ -77,6 +77,7 @@ export const HOLD_REASONS = [
   'self_check_failed',
   'unknown_auth_method',
   'llm_error',
+  'second_issue',
 ] as const
 export type HoldReason = (typeof HOLD_REASONS)[number]
 
@@ -372,6 +373,8 @@ export interface CaseDetail {
   } | null
   decision: Decision | null
   evidence: Evidence | null
+  /** A second problem in the same complaint; `quote` is the customer's own words (hold: second_issue). */
+  other_issues: { category: Category; quote: string }[] | null
   reply: { text: string; redraft_count: number; self_check: SelfCheck | null } | null
   usage: {
     cost_myr: Cost
@@ -380,6 +383,8 @@ export interface CaseDetail {
     schema_version: string
     policy_version: string
     extract: LLMUsage
+    /** The second-issue check's call; null when it was skipped. */
+    issues: LLMUsage | null
     draft: LLMUsage[]
   } | null
   runs: {
