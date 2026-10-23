@@ -84,7 +84,7 @@ Last updated: 2026-10-23, after the S2 regeneration (`665f3bc`).
 - [ ] S5 · Live-round rehearsal: post example and messy complaints, watch them appear in the UI, approve one *(all, after C1)*
 - [ ] S6 · Fill the demo database with the 750 test cases: `python -m backend.batch.runner --ids test --db backend/api.db` *(B)*
 - [ ] S7 · Keep the server running from 15:00 until the demo; keep the laptop awake *(B)*
-- [ ] S8 · Run guide `docs/RUNNING.md`: start, fill, regenerate, check *(B)*
+- [x] S8 · Run guide [RUNNING.md](RUNNING.md): setup, start, make reachable (Wi-Fi or tunnel), check, fill the demo database, regenerate the submission, recovery table, logins, submission steps *(B)*
 
 ## Bonus decisions (Dev B, 2026-10-23)
 
