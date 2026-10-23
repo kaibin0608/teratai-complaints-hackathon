@@ -18,20 +18,24 @@ from backend.contracts import (
 def match_and_decide(complaint: Complaint, clues: Clues) -> EngineResult:
     handler = get_handler(clues.category)
     match_result, evidence = handler.match(complaint, clues)
+    revised = False
 
     if match_result.status == "none" and clues.category != "SERVICE_QUALITY":
         for fallback_cat in get_fallback_categories(clues.category):
             fb_handler = get_handler(fallback_cat)
             fb_match, fb_evidence = fb_handler.match(complaint, clues)
             if fb_match.status != "none":
-                match_result = fb_match
-                evidence = fb_evidence
+                # The handler that found the transaction decides on it; a person confirms the new category.
+                handler, match_result, evidence = fb_handler, fb_match, fb_evidence
                 match_result.category = fallback_cat
+                revised = True
                 break
 
     decision = handler.decide(match_result, evidence, complaint, clues)
 
-    if match_result.status == "ambiguous":
+    if revised:
+        decision = hold(decision, "category_revised")
+    elif match_result.status == "ambiguous":
         decision = hold(decision, "ambiguous_match")
     elif match_result.status == "none" and clues.category != "SERVICE_QUALITY":
         decision = hold(decision, "no_match")
