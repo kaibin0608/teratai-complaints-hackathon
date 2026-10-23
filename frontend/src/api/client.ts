@@ -17,6 +17,9 @@ export function setAuthToken(token: string | null): void {
   authToken = token
 }
 
+/** For calls that must not go through request(), such as the case assistant on its own service (api/chat.ts). */
+export const getAuthToken = (): string | null => authToken
+
 /** Called once by the auth context; fires when the backend rejects the token. */
 export function setUnauthorizedHandler(handler: (() => void) | null): void {
   onUnauthorized = handler

@@ -8,9 +8,12 @@ import { defineConfig } from 'vite'
  * on Windows, localhost tries IPv6 first and adds ~0.2 s to every call.
  */
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://127.0.0.1:8000'
+/** The case assistant (backend/chat, chat.bat): its own service, so the agent's API never restarts for it. */
+const CHAT_URL = process.env.CHAT_URL ?? 'http://127.0.0.1:8001'
 
 // /complaints is the organisers' intake route (docs/api.md). /cases is NOT proxied: it is also a page here.
-const proxy = { '/api': BACKEND_URL, '/complaints': BACKEND_URL }
+// '/api/chat' must come before '/api': the first matching prefix wins.
+const proxy = { '/api/chat': CHAT_URL, '/api': BACKEND_URL, '/complaints': BACKEND_URL }
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url))
 
