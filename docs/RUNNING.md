@@ -129,6 +129,8 @@ The UI logs in with `POST /api/auth/login` ([UI_API.md](UI_API.md#login-roles-an
 
 ## 9. Submission (before 15:00)
 
+The full step-by-step checklist, with the ready PR link and description, is in [SUBMISSION.md](SUBMISSION.md). In short:
+
 1. The final `predictions.csv` is committed on `dev` (section 6).
 2. Merge `dev` → `main`.
 3. Open a PR from the fork to upstream, titled **`Submission: Santa_Claude`**, with `submissions/Santa_Claude/predictions.csv`. In the description put the **freeze commit hash** (`git rev-parse HEAD` on `main`) and the **API URL** (section 3).
