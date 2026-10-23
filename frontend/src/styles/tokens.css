@@ -104,15 +104,15 @@
   --color-info-900: #0a2148;
 
   /* Data visualisation — categorical, in this fixed order. Passes scripts/validate_palette.js (lightness band,
-     chroma floor, adjacent CVD separation, normal-vision floor); contrast on white is below 3:1 for orange,
+     chroma floor, adjacent CVD separation, normal-vision floor); contrast on white is below 3:1 for most of them (a light, soft palette),
      so every mark also has a visible label or a table view. */
-  --color-chart-1: #0e9488;
-  --color-chart-2: #7b55c9;
-  --color-chart-3: #d9801a;
-  --color-chart-4: #3a6fd8;
-  --color-chart-5: #b8386e;
-  --color-chart-6: #6e7f2e;
-  --color-chart-7: #2a9ac4;
+  --color-chart-1: #3fb8a8;
+  --color-chart-2: #9b85de;
+  --color-chart-3: #ec9c38;
+  --color-chart-4: #5f8fe6;
+  --color-chart-5: #e27a9c;
+  --color-chart-6: #9db44e;
+  --color-chart-7: #58b4de;
 
   /* Semantic — surfaces: bg-page, bg-card, bg-subtle, bg-selected, bg-inverse.
      The sidebar sits on bg-page with no border; only the content panel (bg-card) is bordered. */
