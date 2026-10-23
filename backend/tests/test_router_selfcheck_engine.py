@@ -186,3 +186,23 @@ class TestEngineWiring:
         result = match_and_decide(complaint, clues)
         if result.match.status == "ambiguous":
             assert result.decision.route in ("HUMAN_APPROVAL", "FRAUD_TEAM")
+
+    def test_fallback_match_is_decided_by_the_handler_that_found_it(self, monkeypatch):
+        """The extractor says FAILED_TRANSFER, the failed-transfer handler finds nothing, the scam handler
+        finds the transfer: the scam handler decides, and a person confirms the revised category."""
+        from backend.agent.categories.registry import get_handler
+        from backend.contracts import MatchResult
+
+        failed = get_handler("FAILED_TRANSFER")
+        monkeypatch.setattr(failed, "match", lambda complaint, clues: (
+            MatchResult(status="none", category="FAILED_TRANSFER"), Evidence()))
+        complaint = load_complaint("CMP-00005")  # scam: RM8,085.08 to Iskandar bin Omar, labelled TXN-0120065
+        clues = Clues(category="FAILED_TRANSFER", language="MS", amount_mentioned=Decimal("8085.08"),
+                      counterparty_name="Iskandar bin Omar", date_phrase="semalam")
+        result = match_and_decide(complaint, clues)
+        assert result.match.category == "SCAM_TRANSFER"
+        assert result.decision.category == "SCAM_TRANSFER"
+        assert result.decision.matched_txn_id == "TXN-0120065"
+        assert result.decision.outcome == "INVESTIGATE" and result.decision.refund_amount_myr == 0
+        assert result.decision.route == "FRAUD_TEAM"
+        assert result.decision.hold_reason == "category_revised"
