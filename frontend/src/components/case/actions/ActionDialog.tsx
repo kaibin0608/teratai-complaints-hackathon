@@ -14,6 +14,7 @@ import { ADVANCING } from '@/lib/advance'
 import type { ActionBodies, CaseDetail } from '@/lib/types'
 import { ACTIONS, type FieldSpec } from './actionConfig'
 import { UserSelect } from './UserSelect'
+import { useNameOf } from '@/hooks/useNameOf'
 
 interface ActionDialogProps {
   /** The action being confirmed; null keeps the dialog closed. */
@@ -48,10 +49,11 @@ interface ActionFormProps {
 
 function ActionForm({ action, detail, onClose, onChanged }: ActionFormProps) {
   const spec = ACTIONS[action]
+  const nameOf = useNameOf()
   const advance = useAdvance()
   const [state, setState] = useState<FormState>({ status: 'idle' })
   const pending = state.status === 'pending'
-  const description = spec.description(detail)
+  const description = spec.description(detail, nameOf)
   const destructive = action === 'reject' || action === 'second-tier-reject'
 
   async function submit(event: FormEvent<HTMLFormElement>) {

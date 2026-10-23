@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { demoNow } from '@/lib/clock'
+import { now } from '@/lib/clock'
 import type { IsoTime } from '@/lib/types'
 
 /*
@@ -7,15 +7,15 @@ import type { IsoTime } from '@/lib/types'
  * It runs only while at least one component is subscribed.
  */
 const listeners = new Set<() => void>()
-let snapshot: IsoTime = demoNow()
+let snapshot: IsoTime = now()
 let timer: ReturnType<typeof setInterval> | undefined
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener)
   if (timer === undefined) {
-    snapshot = demoNow()
+    snapshot = now()
     timer = setInterval(() => {
-      snapshot = demoNow()
+      snapshot = now()
       listeners.forEach((notify) => notify())
     }, 1000)
   }
@@ -28,7 +28,7 @@ function subscribe(listener: () => void): () => void {
   }
 }
 
-/** Current demo-clock time (naive MYT), re-rendering once per second. */
-export function useDemoNow(): IsoTime {
+/** Current time (naive MYT), re-rendering once per second. */
+export function useNow(): IsoTime {
   return useSyncExternalStore(subscribe, () => snapshot)
 }

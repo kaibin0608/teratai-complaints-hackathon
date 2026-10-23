@@ -4,6 +4,7 @@ import { awaitsFirstTier } from '@/lib/case'
 import { formatIsoTime, formatMoney } from '@/lib/format'
 import { fraudOutcomeLabel, holdReasonHelp, holdReasonLabel, outcomeLabel, routeLabel } from '@/lib/labels'
 import type { CaseDetail, Escalation } from '@/lib/types'
+import { useNameOf } from '@/hooks/useNameOf'
 
 /** What the manager is being asked to approve. */
 function describeProposal(proposal: Escalation['proposal']): string {
@@ -14,6 +15,7 @@ function describeProposal(proposal: Escalation['proposal']): string {
 
 /** Why this case needs extra care, most urgent first. Renders nothing for a routine case. */
 export function CaseBanners({ detail }: { detail: CaseDetail }) {
+  const nameOf = useNameOf()
   const { case: c, decision } = detail
   const movedByHold = decision && decision.policy_route !== decision.route
 
@@ -40,7 +42,7 @@ export function CaseBanners({ detail }: { detail: CaseDetail }) {
         key="escalated"
         tone="error"
         icon={CircleArrowUp}
-        title={`Escalated to the manager by ${c.escalation.by} · ${formatIsoTime(c.escalation.at)}`}
+        title={`Escalated to the manager by ${nameOf(c.escalation.by)} · ${formatIsoTime(c.escalation.at)}`}
       >
         {c.escalation.reason}
         <br />

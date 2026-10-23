@@ -1,5 +1,5 @@
 import { AlarmClock, CircleCheck } from 'lucide-react'
-import { useDemoNow } from '@/hooks/useDemoNow'
+import { useNow } from '@/hooks/useNow'
 import { mytToMs } from '@/lib/clock'
 import { formatDuration, formatIsoTime } from '@/lib/format'
 import { slaStatus, type SlaState } from '@/lib/sla'
@@ -19,7 +19,7 @@ interface SLATimerProps {
   doneAt?: IsoTime | null
 }
 
-/** Live countdown against the demo clock; once done, shows whether the deadline was met. */
+/** Live countdown against the current time; once done, shows whether the deadline was met. */
 export function SLATimer({ start, due, label, doneAt }: SLATimerProps) {
   if (doneAt) {
     const late = mytToMs(doneAt) > mytToMs(due)
@@ -33,7 +33,7 @@ export function SLATimer({ start, due, label, doneAt }: SLATimerProps) {
 }
 
 function Countdown({ start, due, label }: Omit<SLATimerProps, 'doneAt'>) {
-  const now = useDemoNow()
+  const now = useNow()
   const { state, remainingMs } = slaStatus(start, due, mytToMs(now))
   const time = formatDuration(remainingMs)
   return (

@@ -4,9 +4,11 @@ import { SelfCheckBadge } from '@/components/shared/SelfCheckBadge'
 import { formatIsoTime, formatMoney } from '@/lib/format'
 import { highlightReply } from '@/lib/replyCheck'
 import type { CaseDetail } from '@/lib/types'
+import { useNameOf } from '@/hooks/useNameOf'
 
 /** The drafted reply with its self-check. Any ID or amount not in the evidence is marked in red. */
 export function ReplyCard({ detail }: { detail: CaseDetail }) {
+  const nameOf = useNameOf()
   const { reply, evidence, draft_reply: draft } = detail
   if (!reply) return null
   const check = reply.self_check
@@ -35,7 +37,7 @@ export function ReplyCard({ detail }: { detail: CaseDetail }) {
           <ReplyText text={draft.text} allowedIds={allowedIds} allowedAmounts={allowedAmounts} />
           {draft.problems.length > 0 && <Problems problems={draft.problems} />}
           <p className="mt-2 text-xs text-secondary">
-            Edited by {draft.by} · {formatIsoTime(draft.at)}
+            Edited by {nameOf(draft.by)} · {formatIsoTime(draft.at)}
           </p>
         </div>
       )}

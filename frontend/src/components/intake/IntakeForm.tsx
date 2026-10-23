@@ -3,7 +3,7 @@ import { Button } from '@/components/shared/Button'
 import { SelectField } from '@/components/shared/SelectField'
 import { TextArea } from '@/components/shared/TextArea'
 import { TextField } from '@/components/shared/TextField'
-import { demoNow } from '@/lib/clock'
+import { now } from '@/lib/clock'
 import { toContractTime } from '@/lib/intake'
 import { COMPLAINT_CHANNELS, type ComplaintInput } from '@/lib/types'
 
@@ -14,7 +14,7 @@ interface IntakeFormProps {
   onSubmit: (complaints: ComplaintInput[]) => void
 }
 
-/** One complaint. Defaults to the demo date (the live round is dated 30 Sep 2026) and a fresh ID. */
+/** One complaint. Defaults to the current time and a fresh ID. */
 export function IntakeForm({ disabled, onSubmit }: IntakeFormProps) {
   // A new ID after each send, so the same complaint is not posted twice by accident.
   const [id, setId] = useState(newId)
@@ -42,7 +42,7 @@ export function IntakeForm({ disabled, onSubmit }: IntakeFormProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField label="Complaint ID" name="complaint_id" key={id} defaultValue={id} required />
         <TextField label="Customer ID" name="customer_id" placeholder="CUS-02394" pattern="[Cc][Uu][Ss]-\d{5}" title="CUS- followed by 5 digits" required />
-        <TextField label="Received at" name="received_at" type="datetime-local" defaultValue={demoNow().slice(0, 16)} required />
+        <TextField label="Received at" name="received_at" type="datetime-local" defaultValue={now().slice(0, 16)} required />
         <SelectField
           label="Channel"
           name="channel"

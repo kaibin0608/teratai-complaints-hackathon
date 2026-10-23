@@ -7,6 +7,7 @@ import { formatMoney } from '@/lib/format'
 import type { CaseDetail } from '@/lib/types'
 import { ActionDialog } from './ActionDialog'
 import { ACTIONS } from './actionConfig'
+import { useNameOf } from '@/hooks/useNameOf'
 
 interface CaseActionsProps {
   detail: CaseDetail
@@ -20,10 +21,11 @@ interface CaseActionsProps {
  */
 export function CaseActions({ detail, onChanged }: CaseActionsProps) {
   const auth = useAuth()
+  const nameOf = useNameOf()
   const [open, setOpen] = useState<ActionKey | null>(null)
   if (auth.status !== 'signed_in') return null
 
-  const { actions, notice, limit } = planActions(detail, auth.user)
+  const { actions, notice, limit } = planActions(detail, auth.user, nameOf)
   if (actions.length === 0 && !notice) return null
 
   return (

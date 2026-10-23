@@ -12,7 +12,7 @@ export interface SlaStatus {
   remainingMs: number
 }
 
-/** SLA state of a deadline measured on the demo clock; the window runs from `start` (received_at) to `due`. */
+/** SLA state of a deadline measured at a given time; the window runs from `start` (received_at) to `due`. */
 export function slaStatus(start: IsoTime, due: IsoTime, nowMs: number): SlaStatus {
   const dueMs = mytToMs(due)
   const remainingMs = dueMs - nowMs

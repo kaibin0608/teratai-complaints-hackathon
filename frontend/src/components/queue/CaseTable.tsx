@@ -15,6 +15,7 @@ import { formatIsoTime, formatMoney } from '@/lib/format'
 import { holdReasonLabel, outcomeLabel } from '@/lib/labels'
 import { paths } from '@/lib/paths'
 import type { CaseListItem } from '@/lib/types'
+import { useNameOf } from '@/hooks/useNameOf'
 
 /*
  * Below 1360 px the Self-check column is dropped; a flagged reply still shows in the Status cell.
@@ -137,6 +138,7 @@ function CaseRow({ item }: { item: CaseListItem }) {
 
 /** Why it's waiting (the backend's text), or where it ended up; a hold shows once, as its badge. */
 function StatusCell({ item }: { item: CaseListItem }) {
+  const nameOf = useNameOf()
   const holdIsTheReason = item.hold_reason !== null && item.waiting_reason === holdReasonLabel[item.hold_reason]
   return (
     <div className="flex flex-col items-start gap-1">
@@ -145,7 +147,7 @@ function StatusCell({ item }: { item: CaseListItem }) {
       {/* Who closed it, or that the holding reply has already gone to a fraud customer. */}
       {item.human_action && (
         <span className="text-xs text-secondary">
-          {actionLabel(item.human_action.action)} · {item.human_action.actor}
+          {actionLabel(item.human_action.action)} · {nameOf(item.human_action.actor)}
         </span>
       )}
       {item.queue === 'with_fraud_team' && item.sent && !item.human_action && <span className="text-xs text-secondary">Holding reply sent</span>}
@@ -167,10 +169,10 @@ function StatusCell({ item }: { item: CaseListItem }) {
       )}
       {item.escalation && item.workflow === 'escalated' && (
         <span className="text-xs text-secondary">
-          {item.escalation.by}: {item.escalation.reason}
+          {nameOf(item.escalation.by)}: {item.escalation.reason}
         </span>
       )}
-      {item.assigned_to && <span className="text-xs text-secondary">Assigned to {item.assigned_to}</span>}
+      {item.assigned_to && <span className="text-xs text-secondary">Assigned to {nameOf(item.assigned_to)}</span>}
     </div>
   )
 }

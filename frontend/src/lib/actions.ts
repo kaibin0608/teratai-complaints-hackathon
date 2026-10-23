@@ -5,6 +5,7 @@
 import { isOpen } from './case'
 import { compareMoney } from './money'
 import type { CaseAction, CaseDetail, Money, User } from './types'
+import type { NameOf } from './people'
 
 /** Platform actions the case page offers. */
 export type ActionKey = CaseAction
@@ -36,20 +37,20 @@ export interface ActionPlan {
 const NONE: ActionPlan = { actions: [], notice: null, limit: null }
 const only = (notice: string): ActionPlan => ({ ...NONE, notice })
 
-export function planActions(detail: CaseDetail, user: User): ActionPlan {
-  const plan = planFor(detail, user)
+export function planActions(detail: CaseDetail, user: User, nameOf: NameOf = (username) => username): ActionPlan {
+  const plan = planFor(detail, user, nameOf)
   // The manager can hand any open case to someone else (once assigned, only that person or the manager can act).
   if (user.role !== 'manager' || plan.actions.length === 0) return plan
   return { ...plan, actions: [{ key: 'reassign', emphasis: 'ghost' }, ...plan.actions] }
 }
 
-function planFor(detail: CaseDetail, user: User): ActionPlan {
+function planFor(detail: CaseDetail, user: User, nameOf: NameOf): ActionPlan {
   const { case: c } = detail
   if (!isOpen(detail)) return NONE
   if (c.workflow === 'reprocessing') return only('The agent is re-running this case. Actions unlock when it finishes.')
   if (c.workflow === 'escalated') return planEscalated(detail, user)
   if (c.assigned_to && c.assigned_to !== user.username && user.role !== 'manager') {
-    return only(`Assigned to ${c.assigned_to}: only they or the manager can act on it.`)
+    return only(`Assigned to ${nameOf(c.assigned_to)}: only they or the manager can act on it.`)
   }
   if (c.queue === 'awaiting_approval') return planApproval(detail, user)
   if (c.queue === 'with_fraud_team') return planFraud(detail, user)

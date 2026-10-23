@@ -16,6 +16,7 @@ import { formatMoney } from '@/lib/format'
 import { fraudOutcomeLabel } from '@/lib/labels'
 import type { ActionKey } from '@/lib/actions'
 import { FRAUD_OUTCOMES, type CaseDetail } from '@/lib/types'
+import type { NameOf } from '@/lib/people'
 
 /** Form fields are named after the request body keys (ActionBodies in lib/types.ts). */
 export interface FieldSpec {
@@ -35,7 +36,7 @@ export interface ActionSpec {
   icon: LucideIcon
   title: string
   /** What will happen, in plain words, shown above the form. */
-  description: (detail: CaseDetail) => string | null
+  description: (detail: CaseDetail, nameOf: NameOf) => string | null
   submit: string
   fields: (detail: CaseDetail) => FieldSpec[]
 }
@@ -134,8 +135,8 @@ export const ACTIONS: Record<ActionKey, ActionSpec> = {
     label: 'Reassign',
     icon: UserRoundCog,
     title: 'Reassign the case',
-    description: (d) =>
-      `Hands the case to another person. Only they, or you, can then act on it.${d.case.assigned_to ? ` Currently assigned to ${d.case.assigned_to}.` : ''}`,
+    description: (d, nameOf) =>
+      `Hands the case to another person. Only they, or you, can then act on it.${d.case.assigned_to ? ` Currently assigned to ${nameOf(d.case.assigned_to)}.` : ''}`,
     submit: 'Reassign',
     fields: () => [{ name: 'username', label: 'Assign to', input: 'user', required: true }, reason('Note', false)],
   },

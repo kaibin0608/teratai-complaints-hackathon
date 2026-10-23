@@ -3,7 +3,7 @@ import { authApi } from '@/api/auth'
 import { setAuthToken, setUnauthorizedHandler } from '@/api/client'
 import { AuthContext, type AuthContextValue, type AuthState } from './auth-context'
 
-/** Per tab, so officer / analyst / manager can be signed in side by side for the demo. */
+/** Per tab, so officer / analyst / manager can be signed in side by side. */
 const TOKEN_KEY = 'teratai.auth.token'
 
 const tokenStore = {

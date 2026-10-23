@@ -10,6 +10,8 @@ import { describeEvent } from '@/lib/events'
 import { formatIsoTime } from '@/lib/format'
 import type { AuditEvent, AuditQuery } from '@/lib/types'
 import { AuditTable } from './AuditTable'
+import { useNameOf } from '@/hooks/useNameOf'
+import type { NameOf } from '@/lib/people'
 
 const PAGE_SIZE = 100
 const ANY = ''
@@ -39,6 +41,7 @@ export function AuditLogView() {
     limit,
   }
   const result = useAuditLog(query)
+  const nameOf = useNameOf()
   const change = (patch: Partial<Filters>) => {
     setFilters((current) => ({ ...current, ...patch }))
     setLimit(PAGE_SIZE)
@@ -46,16 +49,16 @@ export function AuditLogView() {
 
   const facets = result.status === 'success' ? result.data.facets : { actors: [], actions: [] }
   const withCurrent = (values: string[], current: string) => (current && !values.includes(current) ? [current, ...values] : values)
-  const options = (values: string[], current: string, any: string) => [
+  const options = (values: string[], current: string, any: string, label: (value: string) => string = (value) => value) => [
     { value: ANY, label: any },
-    ...withCurrent(values, current).map((value) => ({ value, label: value })),
+    ...withCurrent(values, current).map((value) => ({ value, label: label(value) })),
   ]
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-3">
         <div className="w-52">
-          <SelectField label="Who" value={filters.actor} onChange={(e) => change({ actor: e.target.value })} options={options(facets.actors, filters.actor, 'Anyone')} />
+          <SelectField label="Who" value={filters.actor} onChange={(e) => change({ actor: e.target.value })} options={options(facets.actors, filters.actor, 'Anyone', nameOf)} />
         </div>
         <div className="w-52">
           <SelectField
@@ -91,22 +94,23 @@ export function AuditLogView() {
 type Result = ReturnType<typeof useAuditLog>
 
 function ExportButton({ result }: { result: Result }) {
+  const nameOf = useNameOf()
   const items = result.status === 'success' ? result.data.items : []
   return (
-    <Button disabled={items.length === 0} onClick={() => downloadCsv('audit-log.csv', toRows(items))}>
+    <Button disabled={items.length === 0} onClick={() => downloadCsv('audit-log.csv', toRows(items, nameOf))}>
       <Download size={16} aria-hidden />
       Export CSV
     </Button>
   )
 }
 
-function toRows(items: readonly AuditEvent[]) {
+function toRows(items: readonly AuditEvent[], nameOf: NameOf) {
   const header = ['id', 'when', 'actor', 'action', 'case', 'detail', 'problems']
   return [
     header,
     ...items.map((event) => {
       const { title, note, problems } = describeEvent(event)
-      return [event.id, formatIsoTime(event.created_at), event.actor, title, event.complaint_id, note, problems.join('; ')]
+      return [event.id, formatIsoTime(event.created_at), nameOf(event.actor), title, event.complaint_id, note, problems.join('; ')]
     }),
   ]
 }

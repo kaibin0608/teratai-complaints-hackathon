@@ -15,7 +15,6 @@ export const paths = {
   policy: '/policy',
   case: (complaintId: string) => `/cases/${encodeURIComponent(complaintId)}`,
   /** Development only. */
-  devUi: '/dev/ui',
 } as const
 
 /** Where each role lands after sign-in (PLAN.md §3.2). */

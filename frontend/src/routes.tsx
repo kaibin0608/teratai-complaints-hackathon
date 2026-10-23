@@ -31,15 +31,6 @@ export const router = createBrowserRouter([
         children: [
           { path: paths.intake, element: <Intake /> },
           { path: '/cases/:complaintId', element: <CaseDetail /> },
-          ...(import.meta.env.DEV
-            ? [
-                {
-                  path: paths.devUi,
-                  HydrateFallback: () => null,
-                  lazy: async () => ({ Component: (await import('@/pages/dev/UiKit')).UiKit }),
-                },
-              ]
-            : []),
           {
             element: <ProtectedRoute roles={['officer', 'manager']} />,
             children: [{ path: paths.officer, element: <OfficerDesk /> }],

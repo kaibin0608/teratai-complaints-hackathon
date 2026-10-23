@@ -29,7 +29,7 @@ Sign in as `officer1`, `officer2`, `fraud1` or `manager1`, password `teratai123`
 | `npm test` / `npm run test:watch` | Unit tests for the business rules (Vitest) |
 | `npm run typecheck` / `npm run lint` | TypeScript / oxlint |
 
-`VITE_API_URL` points a built UI at another machine's backend; `BACKEND_URL` changes the dev and preview proxy target; `VITE_DEMO_DATE` changes the demo clock date (default 2026-09-30).
+`VITE_API_URL` points a built UI at another machine's backend; `BACKEND_URL` changes the dev and preview proxy target.
 
 **On another laptop (venue Wi-Fi):** run the backend with `--host 0.0.0.0` (`backend.bat` does), then either `npm run dev -- --host` or `npm run build && npm run preview -- --host`, and open `http://<your-ip>:5173` (dev) or `:4173` (preview). With `AUTH_REQUIRED=true` in the backend's `.env` the UI works unchanged (verified): reads without a token get 401, which signs the user out.
 
@@ -46,14 +46,14 @@ frontend/src/
 ├── api/          client.ts (fetch, token, ApiError), auth.ts, cases.ts (list, get, act), metrics.ts, audit.ts, users.ts
 ├── assets/       teratai-logo.png
 ├── components/
-│   ├── layout/   AppLayout, Sidebar, UserCard, DemoClock, Page, route guards, navigation.ts
+│   ├── layout/   AppLayout, Sidebar, UserCard, Page, route guards, navigation.ts
 │   ├── shared/   Badge (+ Priority, Queue, Workflow, Category, Hold, Vulnerable, Simulated), SLATimer,
 │   │             Button, TextField, Card, Banner, StatusMessage
 │   └── case/     Case page parts: CaseBanners, CaseSla, CaseLoadError (and the 9b–9d cards)
 ├── context/      auth-context.ts, AuthProvider.tsx
-├── hooks/        useAuth, useApi, useCaseDetail, useDemoNow
+├── hooks/        useAuth, useApi, useCaseDetail, useNow
 ├── lib/          types.ts (UI_API.md mirror), format, clock, sla, case, labels, paths, cx
-├── pages/        Login, CaseDetail, OfficerDesk, FraudWorkbench, ManagerConsole, Intake, dev/UiKit
+├── pages/        Login, CaseDetail, OfficerDesk, FraudWorkbench, ManagerConsole, Intake
 ├── styles/       tokens.css (colour system + TUNABLE layout tokens), base.css
 ├── routes.tsx    URL → page + role access
 └── App.tsx       providers + router
@@ -62,7 +62,7 @@ frontend/src/
 **Conventions (UI_API.md):**
 - Money is a 2-decimal string and Cost a 4-decimal string: format with `formatMoney`, never `parseFloat`.
 - Times are Malaysia time with no offset: parse by parts (`lib/format.ts`), never `new Date(string)`. Display `DD-MM-YYYY HH:MM`.
-- SLA timers run on the **demo clock** (30-09-2026 at the current time of day). The dashboard passes the same clock as `as_of`.
+- SLA timers run on the real current time (Malaysia time). The dashboard leaves `as_of` out, so the backend measures as of now.
 - Errors: `ApiError.status`, `.message`, `.problems` (refused reply) and `.limit` (over-limit refusal). 404 also means "another team's case". 409 means the case moved on: re-fetch.
 - Design tokens only (`bg-card`, `text-secondary`, `rounded-card`…). Spacing, radius and shadow are tunable in `styles/tokens.css`.
 
@@ -72,7 +72,7 @@ frontend/src/
 
 | Piece | |
 |---|---|
-| Foundation | Formatting, demo clock, API client, login state, routes + role guards, design tokens + fonts, layout (borderless sidebar + bordered panel), Login page, shared badges, dev UI kit (`/dev/ui`) |
+| Foundation | Formatting, clock, API client, login state, routes + role guards, design tokens + fonts, layout (borderless sidebar + bordered panel), Login page, shared badges |
 | Alignment | Types mirror UI_API.md; real backend instead of a mock; error shapes; queue and workflow badges |
 | Case page, read side | Header, SLA timers, banners; complaint, customer, **evidence per category**, match candidates, decision with calculation, **reply with invented IDs and amounts marked**, agent vs people, cost and speed, timeline with simulated outbound. Polls every 2 s only while the agent is working |
 | **B1. Cases page** | Queue tabs with live counts per role, polled every 4 s so new complaints appear on their own; sort, paging. **Search and filters** (case / customer / subject, category, priority, hold, workflow with counts, assigned to me or unassigned, sensitive, and for the manager "changed by people"); tab, sort and filters all live in the URL. Rows show who closed a case, the holding reply being sent, manual sensitive flags, people overriding the agent, and agent errors |
@@ -99,7 +99,7 @@ Every check in the human-gate checklist ([USERFLOW.md §4](USERFLOW.md#4-flow-b-
 | **U1 Login, role redirect, role-aware menu** | Done |
 | **U2 Officer Resolution Desk** | Done: approval queue, headroom, Escalate instead of Approve over the limit or when sensitive, Send back, Flag sensitive, Edit reply with the self-check result beside it |
 | **U3 Fraud Investigation Workbench** | Done: fraud queue; auth method in large type; Acknowledge → Log investigation / recall → Record outcome; Escalate with a proposed outcome |
-| **U4 Manager Console** | Done: `/manager` has nine metric tiles (`GET /api/metrics?as_of=<demo clock>`, polled every 10 s) and the escalation queue (`workflow=escalated`, both teams, with who escalated and why; second-tier approve / reject on the case page). `/cases` shows every queue. `/audit` is the audit log with filters from the log's own facets, "people only", load more and **CSV export**. **Reassign** is a manager button on every open case (people from `GET /api/users`) |
+| **U4 Manager Console** | Done: `/manager` has nine metric tiles (`GET /api/metrics`, polled every 10 s) and the escalation queue (`workflow=escalated`, both teams, with who escalated and why; second-tier approve / reject on the case page). `/cases` shows every queue. `/audit` is the audit log with filters from the log's own facets, "people only", load more and **CSV export**. **Reassign** is a manager button on every open case (people from `GET /api/users`) |
 
 ### D. Extras: done
 
@@ -119,6 +119,7 @@ Every route in `docs/UI_API.md` is used: `POST /api/auth/login`, `GET /api/auth/
 2. **A customer search** (`GET /api/customers?q=`) for autocomplete on the Intake form; today the customer ID is typed.
 3. **A retry for failed cases** (STATUS O2): the UI shows an agent error but has nothing to call.
 4. **An outbound-messages list** (`GET /api/outbound`) if a cross-case "nothing was sent without a human" view is wanted; today each case's timeline shows its own simulated messages.
+5. **Names with people.** Actors, assignees and escalators come back as usernames, and only the manager can list users, so an officer sees other people as a tidied username. Return `full_name` beside them, or open a read-only name list to every signed-in role.
 
 ---
 

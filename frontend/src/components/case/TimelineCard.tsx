@@ -3,6 +3,7 @@ import { SimulatedBadge } from '@/components/shared/SimulatedBadge'
 import { describeEvent } from '@/lib/events'
 import { formatIsoTime, formatMoney } from '@/lib/format'
 import type { AuditEvent, CaseDetail, IsoTime } from '@/lib/types'
+import { useNameOf } from '@/hooks/useNameOf'
 
 type Entry =
   | { kind: 'event'; at: IsoTime; event: AuditEvent }
@@ -38,6 +39,7 @@ function Meta({ at, who }: { at: IsoTime; who: string }) {
 }
 
 function EventRow({ event }: { event: AuditEvent }) {
+  const nameOf = useNameOf()
   const { title, note, problems } = describeEvent(event)
   return (
     <>
@@ -50,12 +52,13 @@ function EventRow({ event }: { event: AuditEvent }) {
           ))}
         </ul>
       )}
-      <Meta at={event.created_at} who={event.actor} />
+      <Meta at={event.created_at} who={nameOf(event.actor)} />
     </>
   )
 }
 
 function OutboundRow({ message }: { message: CaseDetail['outbound'][number] }) {
+  const nameOf = useNameOf()
   const holding = message.kind === 'holding_reply'
   const refund = message.refund_amount_myr !== '0.00'
   return (
@@ -69,7 +72,7 @@ function OutboundRow({ message }: { message: CaseDetail['outbound'][number] }) {
         <summary className="cursor-pointer text-sm text-link select-none hover:text-link-hover">Show message</summary>
         <p className="mt-1 rounded-control bg-subtle px-3 py-2 text-sm whitespace-pre-line text-body">{message.reply_text}</p>
       </details>
-      <Meta at={message.created_at} who={`authorised by ${message.authorised_by}`} />
+      <Meta at={message.created_at} who={`authorised by ${nameOf(message.authorised_by)}`} />
     </>
   )
 }

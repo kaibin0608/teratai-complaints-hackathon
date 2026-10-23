@@ -49,7 +49,7 @@ describe('numbers for dashboards', () => {
   })
 })
 
-describe('slaStatus on the demo clock', () => {
+describe('slaStatus ', () => {
   const now = mytToMs('2026-09-30T10:00:00')
 
   it('is on track with plenty of time left', () => {

@@ -25,7 +25,7 @@ Sign in as `officer1`, `officer2`, `fraud1` or `manager1` with password `teratai
 | `npm test` | Unit tests for the business rules |
 | `npm run typecheck` / `npm run lint` | TypeScript / oxlint |
 
-Settings (environment variables): `BACKEND_URL` (dev and preview proxy target, default `http://127.0.0.1:8000`), `VITE_API_URL` (call a backend directly instead of proxying), `VITE_DEMO_DATE` (the demo clock's date, default `2026-09-30`).
+Settings (environment variables): `BACKEND_URL` (dev and preview proxy target, default `http://127.0.0.1:8000`), `VITE_API_URL` (call a backend directly instead of proxying).
 
 ## Where things are
 
@@ -36,7 +36,7 @@ src/
 │                 · case (the case page's cards) · case/actions (decision bar and dialogs)
 │                 · queue · dashboard · charts · audit · intake
 ├── context/      Sign-in state
-├── hooks/        Data loading (useApi: polling, cancellation), auth, demo clock
+├── hooks/        Data loading (useApi: polling, cancellation), auth, clock
 ├── lib/          Business rules and formatting, no React: actions (who may do what), advance, replyCheck,
 │                 money, sla, events, intake, csv, format, labels, types (mirror of UI_API.md)
 ├── pages/        One file per route
@@ -52,4 +52,4 @@ src/
 - **Policy is read, never copied.** The Policy page (manager only) reads the bank's `data/*.csv` files at build time through the `@data` alias, so no policy number is typed into the UI. It is read-only because the policy is fixed.
 - **Colours come from `tokens.css`.** Tailwind's default palette is removed, so only the brand palette exists. Spacing, radius and shadow tokens are meant to be tuned in that one file.
 - **Tailwind needs literal class names.** Don't build a class from pieces (`` `min-[${n}px]:hidden` `` generates nothing).
-- **SLA timers run on the demo clock** (30 Sep 2026 at the current time of day), because the data is from the past.
+- **SLA timers run on the real current time** (Malaysia time), and the dashboard's SLA tiles use the backend's default of now.

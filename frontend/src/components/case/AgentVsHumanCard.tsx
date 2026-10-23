@@ -4,6 +4,7 @@ import { DetailList } from '@/components/shared/DetailList'
 import { formatIsoTime, formatMoney } from '@/lib/format'
 import { fraudOutcomeLabel, outcomeLabel } from '@/lib/labels'
 import { FRAUD_OUTCOMES, type CaseDetail, type FraudOutcome, type Outcome } from '@/lib/types'
+import { useNameOf } from '@/hooks/useNameOf'
 
 const finalLabel = (outcome: NonNullable<CaseDetail['final']>['outcome']): string => {
   if (outcome === null) return '—'
@@ -14,6 +15,7 @@ const finalLabel = (outcome: NonNullable<CaseDetail['final']>['outcome']): strin
 
 /** The agent's own decision (never changed) beside what people did. Shown once a person has acted. */
 export function AgentVsHumanCard({ detail }: { detail: CaseDetail }) {
+  const nameOf = useNameOf()
   const { autonomous, final, differs } = detail
   if (!autonomous || !final) return null
   const reason = detail.case.human_action?.reason
@@ -31,7 +33,7 @@ export function AgentVsHumanCard({ detail }: { detail: CaseDetail }) {
           ]}
         />
         <Column
-          title={`${final.by} (${final.action.replace(/_/g, ' ')})`}
+          title={`${nameOf(final.by)} (${final.action.replace(/_/g, ' ')})`}
           items={[
             { label: 'Outcome', value: finalLabel(final.outcome), changed: differs.decision },
             { label: 'Refund', value: formatMoney(final.refund_amount_myr), changed: differs.refund },

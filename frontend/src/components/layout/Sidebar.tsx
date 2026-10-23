@@ -4,7 +4,6 @@ import { NavLink } from 'react-router'
 import logo from '@/assets/teratai-logo.png'
 import { cx } from '@/lib/cx'
 import type { User } from '@/lib/types'
-import { DemoClock } from './DemoClock'
 import { NAV_ITEMS } from './navigation'
 import { UserCard } from './UserCard'
 
@@ -59,7 +58,6 @@ export function Sidebar({ user, onSignOut }: SidebarProps) {
       </NavSection>
 
       <div className="mt-auto flex flex-col gap-3">
-        <DemoClock />
         <UserCard user={user} />
       </div>
     </aside>

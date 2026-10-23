@@ -3,6 +3,7 @@ import { describeEvent } from '@/lib/events'
 import { formatIsoTime } from '@/lib/format'
 import { paths } from '@/lib/paths'
 import type { AuditEvent } from '@/lib/types'
+import { useNameOf } from '@/hooks/useNameOf'
 
 const COLUMNS = ['When', 'Who', 'What', 'Case', 'Detail'] as const
 
@@ -31,12 +32,13 @@ export function AuditTable({ items }: { items: readonly AuditEvent[] }) {
 }
 
 function AuditRow({ event }: { event: AuditEvent }) {
+  const nameOf = useNameOf()
   const { title, note, problems } = describeEvent(event)
   const replyText = typeof event.detail?.reply_text === 'string' ? event.detail.reply_text : null
   return (
     <tr className="align-top">
       <td className="px-cell-x py-cell-y whitespace-nowrap text-secondary tabular-nums">{formatIsoTime(event.created_at)}</td>
-      <td className="px-cell-x py-cell-y whitespace-nowrap text-primary">{event.actor}</td>
+      <td className="px-cell-x py-cell-y whitespace-nowrap text-primary">{nameOf(event.actor)}</td>
       <td className="px-cell-x py-cell-y text-primary">{title}</td>
       <td className="px-cell-x py-cell-y whitespace-nowrap">
         <Link to={paths.case(event.complaint_id)} className="font-medium text-link hover:text-link-hover">
