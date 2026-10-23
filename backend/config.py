@@ -14,12 +14,29 @@ except ImportError:
     pass
 
 DATA_DIR = ROOT / "data"
-DB_PATH = Path(os.getenv("DB_PATH", ROOT / "backend" / "teratai.db"))
+DB_PATH = Path(os.getenv("DB_PATH", ROOT / "backend" / "teratai.db"))  # batch runs → predictions.csv
+API_DB_PATH = ROOT / os.getenv("API_DB_PATH", "backend/api.db")  # the API server: live round, probes, demo
 INBOX_DIR = Path(os.getenv("INBOX_DIR", ROOT / "inbox"))
 TEAM_NAME = os.getenv("TEAM_NAME", "teratai-team")
 
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "fake")
-LLM_EXTRACT_MODEL = os.getenv("LLM_EXTRACT_MODEL", "")
-LLM_DRAFT_MODEL = os.getenv("LLM_DRAFT_MODEL", "")
+# Each LLM step is "provider:model". Providers: openrouter, openai_compatible, fake (offline keywords/template).
+LLM_EXTRACT = os.getenv("LLM_EXTRACT", "fake:keywords")
+LLM_DRAFT = os.getenv("LLM_DRAFT", "fake:template")
+LLM_EXTRACT_JSON_MODE = os.getenv("LLM_EXTRACT_JSON_MODE", "json_schema")  # json_schema | json_object | prompt
+LLM_DRAFT_JSON_MODE = os.getenv("LLM_DRAFT_JSON_MODE", "prompt")
+# Reasoning effort per step (OpenRouter reasoning.effort: none | low | medium | high ...); empty = the model's default.
+LLM_EXTRACT_REASONING = os.getenv("LLM_EXTRACT_REASONING", "")
+LLM_DRAFT_REASONING = os.getenv("LLM_DRAFT_REASONING", "")
 LLM_MAX_CONCURRENCY = int(os.getenv("LLM_MAX_CONCURRENCY", "8"))
+LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "30"))
+LLM_CACHE_PATH = ROOT / os.getenv("LLM_CACHE_PATH", "backend/.cache/llm_cache.db")  # relative to repo root
 USD_TO_MYR = float(os.getenv("USD_TO_MYR", "4.20"))  # provider prices are in USD; costs are reported in RM
+
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+OPENAI_COMPAT_API_KEY = os.getenv("OPENAI_COMPAT_API_KEY", "")
+OPENAI_COMPAT_BASE_URL = os.getenv("OPENAI_COMPAT_BASE_URL", "")
+
+# Bonus platform login. AUTH_REQUIRED off: /api read routes without a token get the manager's view.
+JWT_SECRET = os.getenv("JWT_SECRET") or "dev-only-not-secret"  # an empty JWT_SECRET= in .env gets the default too
+AUTH_REQUIRED = os.getenv("AUTH_REQUIRED", "false").strip().lower() in ("1", "true", "yes")

@@ -79,7 +79,7 @@ class FailedTransferHandler(CategoryHandler):
                 score += amt_score * 0.4
                 reasons.append(f"amount ({amt_score:.2f})")
 
-            cp_score = self.score_counterparty(t.get("description", ""), clues.counterparty_name)
+            cp_score = self.score_counterparty(t.get("merchant_or_counterparty", "") or t.get("description", ""), clues.counterparty_name)
             if cp_score > 0:
                 score += cp_score * 0.3
                 reasons.append(f"recipient ({cp_score:.2f})")

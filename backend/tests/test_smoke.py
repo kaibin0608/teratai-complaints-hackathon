@@ -62,11 +62,11 @@ def test_business_days_skip_weekend():
     assert add_business_days(friday, 1) == dt.datetime(2026, 9, 28, 9, 0)
 
 
-@pytest.mark.parametrize("complaint_id", ["CMP-00001", "CMP-00002", "CMP-00244"])
-def test_stub_pipeline_produces_prediction_row(complaint_id):
+@pytest.mark.parametrize("complaint_id, refund", [("CMP-00001", "46.54"), ("CMP-00002", "0.00"), ("CMP-00244", "550.00")])
+def test_default_pipeline_produces_prediction_row(complaint_id, refund):
     run = asyncio.run(run_pipeline(load_complaint(complaint_id)))
     assert run.error is None and run.self_check.passed
     assert run.decision.ack_due_at > load_complaint(complaint_id).received_at
     row = run.prediction_row()
     assert list(row) == PREDICTION_COLUMNS
-    assert row["refund_amount_myr"] == "0.00"
+    assert row["refund_amount_myr"] == refund

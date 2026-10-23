@@ -90,12 +90,12 @@ class ATMHandler(CategoryHandler):
                 reasons.append("date in range")
 
             if clues.atm_location:
-                loc_score = self.score_counterparty(t.get("description", ""), clues.atm_location)
+                loc_score = self.score_counterparty(t.get("merchant_or_counterparty", "") or t.get("description", ""), clues.atm_location)
                 if loc_score > 0:
                     score += loc_score * 0.2
                     reasons.append(f"location match ({loc_score:.2f})")
             elif clues.counterparty_name:
-                loc_score = self.score_counterparty(t.get("description", ""), clues.counterparty_name)
+                loc_score = self.score_counterparty(t.get("merchant_or_counterparty", "") or t.get("description", ""), clues.counterparty_name)
                 if loc_score > 0:
                     score += loc_score * 0.2
                     reasons.append(f"location match ({loc_score:.2f})")

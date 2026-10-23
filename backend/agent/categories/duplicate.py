@@ -105,6 +105,8 @@ class DuplicateChargeHandler(CategoryHandler):
                 candidates.append(Candidate(txn_id=t["txn_id"], score=min(score, 1.0), reasons=reasons))
 
         result = self.pick_best(candidates)
+        if result.status == "ambiguous":
+            result = self._resolve_tied_pair(result, candidates, txns)
         result.category = self.category
 
         if result.txn_id:
@@ -174,6 +176,21 @@ class DuplicateChargeHandler(CategoryHandler):
                 },
             ),
         )
+
+    def _resolve_tied_pair(self, result: MatchResult, candidates: list[Candidate], txns: list[dict]) -> MatchResult:
+        """Two top candidates with the same score that are each other's duplicate pair are the duplicate itself:
+        take the later charge (the one policy refunds) and call it confident. Any other tie stays ambiguous."""
+        if len(candidates) < 2 or candidates[0].score != candidates[1].score:
+            return result
+        if len(candidates) > 2 and candidates[2].score > candidates[0].score - 0.15:
+            return result
+        by_id = {t["txn_id"]: t for t in txns}
+        first, second = by_id.get(candidates[0].txn_id), by_id.get(candidates[1].txn_id)
+        if not first or not second or self._find_pair(first, [second]) is None:
+            return result
+        later = max(first, second, key=lambda t: t["time"])
+        ordered = sorted(candidates[:2], key=lambda c: c.txn_id != later["txn_id"]) + candidates[2:]
+        return MatchResult(status="confident", txn_id=later["txn_id"], candidates=ordered, category=self.category)
 
     @staticmethod
     def _find_pair(txn: dict, all_txns: list[dict]) -> dict | None:

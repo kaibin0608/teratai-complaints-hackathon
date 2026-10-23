@@ -1,0 +1,50 @@
+complaint_id,customer_id,received_at,channel,subject,text
+MSY-00001,CUS-00803,2026-08-01 08:13,App chat,,sy withdraw rm300 hari selasa lps tp mesin tak keluar duit. acc sy tetap kena debit. pls settle cepat ya
+MSY-00002,CUS-00110,2026-09-28 10:38,Email,URGENT,"hi bank, mesin tak keluar semua duit masa i withdraw rm200 hari 27/09/2026 tapi full amount kena deduct dari akaun i pls check and advise asap thx"
+MSY-00003,CUS-01289,2026-09-23 16:30,App chat,,"hello leh, i withdraw rm1500 kat kota bharu mall atm on 20/09/2026 tapi machine tak keluarkan cash lah. account i still kena debit ah. tolong check ya, thank you"
+MSY-00004,CUS-02381,2026-09-03 08:07,App chat,,hai!! saya keluarkan rm800 kat george town market semalam tp duit tak keluar full??? akaun saya masih kena tolak lagi 😡
+MSY-00005,CUS-00359,2026-08-09 08:50,Call centre note,,cust called re atm w/d approx rm500 kuching mall atm 8 aug 2026 says cash not fully dispensed
+MSY-00006,CUS-00662,2026-08-12 12:45,App chat,,"hi bank 🙏 ytd i tried to withdraw rm800 at the bangsar market atm on 10 aug. machine didn't give me any cash tho 😢 but my account still got debited. pls help check ya, thank you"
+MSY-00007,CUS-01094,2026-07-11 13:24,Email,Double charge on my card,sy kena charge dua kali kat restoran selera butterworth hari ni utk rm15 (kad hujung 5582). sy cuma buat satu pembelian je. tlg bg tau
+MSY-00008,CUS-01123,2026-07-16 14:59,Branch form,,saya kena charge dua kali kat bukuonline 11 julai rm101.27 tp saya cuma beli sekali je tolong check ya thx
+MSY-00009,CUS-01383,2026-07-02 12:45,Call centre note,,"Cust called. Says card charged twice at ShopLah Online last Tues, RM26.83 each. Wants refund of extra charge lah."
+MSY-00010,CUS-02846,2026-08-30 12:18,Call centre note,,"Cust called re card ending 5997, says charged twice at Kopitiam on 29 Aug 2026, RM38.52 each. Wants refund of extra charge. Pls chk txn log, dup w/d?"
+MSY-00011,CUS-01058,2026-07-07 14:57,App chat,,salam bayaran rm92.45 kat bukuonline keluar dua kali dalam akaun saya 25 jun kad hujung 8088 tolong check ya
+MSY-00012,CUS-02343,2026-07-31 22:44,App chat,,"Hi, bayaran RM268.83 kat ShopLah Online keluar 2x dalam akaun saya hari Selasa lepas 😢 tolong check ya & refund balik duit saya 🙏"
+MSY-00013,CUS-02290,2026-08-17 21:40,App chat,,"sy dah buat transfer duitnow around rm3600 kat fatimah hari sabtu lps tp failed, dh kena potong dr akaun. tq"
+MSY-00014,CUS-00964,2026-09-03 11:57,Call centre note,,"cust called re duitnow txn ~rm2k to tan jun wei dt 01/09/2026 failed per cust but acct got debited, recpt never recvd it"
+MSY-00015,CUS-02638,2026-08-25 13:49,App chat,,"My transfer of RM216.28 to account ending 6022 last Sunday tak masuk lah. Recipient kata nothing came in, tapi balance i sudah turun meh. Tolong check ah, thanks."
+MSY-00016,CUS-02453,2026-07-02 13:05,App chat,,wtf!!! i made an IBG transfer RM2240.27 to acc ending 8615 last monday and it FAILED???110% still deducted from my account!!! fix this asap pls 😡🙏
+MSY-00017,CUS-02599,2026-09-15 12:05,Email,URGENT,hi saya transfer rm801.06 ke account hujung 3239 on 14/09/2026 guna duitnow tapi failed duit dah tolak mohon bantu urgent
+MSY-00018,CUS-02662,2026-08-15 10:10,App chat,,"hi, gd day 🙏 my transfer about rm1.8k to siew lan last thu didnt go through😢 she say nothing masuk but my balance dah turun leh. pls check and refund ya, thanks 🙏"
+MSY-00019,CUS-00049,2026-08-13 12:55,Social media DM,,"hi, kenapa sy kena caj debit card annual fee rm12 utk july? x expect pn. pls settle cepat tq"
+MSY-00020,CUS-00555,2026-07-01 15:19,App chat,,hi kenapa ada annual fee cc rm150 bulan jun wehh
+MSY-00021,CUS-01229,2026-07-01 15:32,Email,Wrong fee charged,"Dear Teratai Bank, wah I tak faham lah, why got debit card annual fee charged for June on my account leh? Mana ada I apply for any annual fee one, pls check and explain ya. Thanks ah."
+MSY-00022,CUS-01633,2026-07-09 08:57,Email,Wrong fee charged,"Ya I really dont understand this!!! 😡 I got charged a debit card annual fee of RM12.00 for JULY on my account??? I am 74 years old, I never asked for any of this. Please RESOLVE this quickly, I dont have time for this nonsense 🙏"
+MSY-00023,CUS-02440,2026-08-20 12:53,Email,Wrong fee charged,hi i dont understand why theres a credit card annual fee for july on my account my credit card is still new so please check and refund it thanks
+MSY-00024,CUS-00066,2026-08-15 21:56,App chat,,"Hi bank 🙏 sorry to trouble u, but i dunno why there's a monthly service charge RM20 in July on my acc 😢 pls help fix this asap thx"
+MSY-00025,CUS-01210,2026-09-09 09:11,App chat,,sy dpt call ptg kata ada parcel atas nama sy ada brg terlarang n sy kena bayar denda. sy dh transfer rm1466.78 ke akaun hujung 4814 smlm. tlg bantu pls
+MSY-00026,CUS-00024,2026-08-24 21:41,App chat,,"hi good day sir/mdm, got a call yesterday frm a man say he police officer and my acc linked to money laundring case, he tell me move all my savings to a ""safe acc"" so i transfer rm28621.22 to huda binti hamid on 21 aug. now i realise is scam lah, pls help me get back my money asap, very worried"
+MSY-00027,CUS-01123,2026-09-27 19:18,Email,Scam - please help,"Hi lah, ada call kata parcel saya ada barang haram, kena bayar fine ah. Saya dah transfer rm1048.09 to Aminah semalam. Rasa kena tipu lah, takut sangat ni."
+MSY-00028,CUS-01270,2026-09-03 12:01,Email,Scam - please help,"Subject: URGENT!!! scam transfer, pls help me get my money back 😡🙏
+
+Dear bank team,
+
+I need help NOW!!! Yesterday i got a call from a man who said he was a POLICE OFFICER???? He said my account was linked to some money laundering case and told me to move my savings to a ""safe account"" 😡 So like a fool i transferred around RM1600 to Ravi semalam!!! I only realise just now that it was a SCAM!!! 😭 Please, please help me get my money back, i really cannot lose this money!!! 🙏
+
+Regards,
+Customer"
+MSY-00029,CUS-01528,2026-08-01 18:55,Email,Ditipu - tolong,"hi bank saya nak report sesuatu. saya join kerja sambilan dalam group aplikasi mesej yg bayar komisen utk like video. dorang mintak saya bayar rm1764.83 ke akaun hujung 8164 hari selasa lepas utk keluarkan pendapatan, lepas tu terus block saya. tolong check ye"
+MSY-00030,CUS-02498,2026-09-26 20:16,App chat,,"hi bank 🙏 sorry to disturb, tbh i need help urgently 😢 i transferred rm19211.95 to faris bin rahman last thursday for an investment scheme i joined from a chat group. now i cannot withdraw anything and the admin already disappeared 😭 pls help, i really dont know what to do"
+MSY-00031,CUS-01948,2026-09-10 13:55,Call centre note,,"cust called re: cash deposit machine at setapak branch - out of order x 1 wk. cust reports machine not working, unable to dep cash. pls log & escalate to branch ops."
+MSY-00032,CUS-02164,2026-08-26 22:23,Call centre note,,cust called re complaint. cust says: waited >2 hrs at ur kota bharu branch n counter staff was rude when i asked why
+MSY-00033,CUS-00509,2026-08-24 12:44,Email,Poor service,"Hello lah, the cash deposit machine at the Setapak branch sudah rosak for one week already leh. Every time I try to deposit cash, cannot use, so really very troublesome ah. Please check and fix it soon, thanks."
+MSY-00034,CUS-00264,2026-08-16 08:40,App chat,,Saya dah call customer service LIMA KALI semalam!!! tapi tak ada ssorang pun angkat 😡 Apa ni??? Takkan la macam ni servis bank 🙏
+MSY-00035,CUS-00743,2026-07-11 14:16,Social media DM,,ok so i called the hotline five times ytd and nobody picked up
+MSY-00036,CUS-02253,2026-09-29 09:10,Branch form,,"Tuan/Puan, saya dah call customer service 5 kali semalam tapi takde sape2 yang angkat 😢 tolong bantu saya ya 🙏"
+MSY-00037,CUS-01757,2026-07-24 16:40,Call centre note,,"cust called re: disputed card txn RM3,043.53 ytd. cust says card still in her possession, didn't authorise."
+MSY-00038,CUS-00893,2026-07-16 11:26,App chat,,saya ga buat bayaran rm64.49 kat PAYCOIN EXCHANGE hari jumaat lps tlg block kad sy ni cpt
+MSY-00039,CUS-02839,2026-07-20 08:44,App chat,,"Eh, I never authorise the RM831.76 payment at TECHMART last Saturday lah. Tolong block card I ah, and refund me leh."
+MSY-00040,CUS-00297,2026-07-12 22:32,Email,URGENT,"Helo bank!!! Saya nak report transaksi PELIK!!! RM3,100 kat QUICKBUY STORE minggu lepas, kad saya hujung 1857. SAYA TAK BUAT TRANSAKSI TU!!! Kad saya masih ada dengan saya lagi 😡 Tolong check dan refund duit saya segera!!! Dah menunggu ni??? 🙏"
+MSY-00041,CUS-01416,2026-09-05 17:29,Branch form,,ada transaksi rm631.83 kt TECHMART SG hari ini kat kad saya tp saya tak buat. kad masih ada dgn saya. tolong bantu
+MSY-00042,CUS-01689,2026-07-16 18:56,Call centre note,,"Cust called re: disputed card txn ~RM2,900 @ ElektroHub Ipoh last Mon. Cust says card still in their possession. 😢"

@@ -7,6 +7,8 @@ details.csv
 .DS_Store
 .pytest_cache/
 *.db
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
 backend/.cache/
@@ -14,3 +16,6 @@ inbox/*
 !inbox/.gitkeep
 node_modules/
 frontend/dist/
+
+# Claude Code: share the project commands and skills, never personal settings
+.claude/settings.local.json

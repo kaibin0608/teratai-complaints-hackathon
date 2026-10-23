@@ -25,10 +25,15 @@ class TestExactDate:
 
 
 class TestYesterday:
-    @pytest.mark.parametrize("phrase", ["yesterday", "semalam", "kelmarin"])
+    @pytest.mark.parametrize("phrase", ["yesterday", "semalam", "ytd", "smlm"])
     def test_yesterday_variants(self, phrase):
         start, end = resolve_date(phrase, None, RECEIVED)
         assert start == end == dt.date(2026, 9, 29)
+
+    @pytest.mark.parametrize("phrase", ["kelmarin", "kemarin"])
+    def test_kelmarin_covers_yesterday_and_the_day_before(self, phrase):
+        # usually "the day before yesterday", sometimes "yesterday": the window holds both
+        assert resolve_date(phrase, None, RECEIVED) == (dt.date(2026, 9, 28), dt.date(2026, 9, 29))
 
 
 class TestToday:
@@ -39,12 +44,12 @@ class TestToday:
 
 
 class TestLastWeek:
-    @pytest.mark.parametrize("phrase", ["last week", "minggu lepas", "minggu lalu"])
-    def test_last_week_is_7_day_window(self, phrase):
+    @pytest.mark.parametrize("phrase", ["last week", "minggu lepas", "minggu lalu", "mgg lps", "last wk"])
+    def test_last_week_is_2_to_14_days_back(self, phrase):
+        # labels_train.csv: "last week" transactions are 5-12 days before received_at (66 complaints);
+        # the old 1-7 day window missed 45 of them
         start, end = resolve_date(phrase, None, RECEIVED)
-        assert end == dt.date(2026, 9, 29)
-        assert start == dt.date(2026, 9, 23)
-        assert (end - start).days == 6
+        assert (start, end) == (dt.date(2026, 9, 16), dt.date(2026, 9, 28))
 
 
 class TestThisWeek:

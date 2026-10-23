@@ -98,7 +98,8 @@ class FeeDisputeHandler(CategoryHandler):
             fee_desc = t.get("description", "").lower()
             if clues.fee_type:
                 ft = clues.fee_type.lower()
-                if ft in fee_desc or any(tok in fee_desc for tok in ft.split() if len(tok) > 3):
+                words = [tok for tok in ft.split() if len(tok) > 3]
+                if ft in fee_desc or (words and all(tok in fee_desc for tok in words)):
                     score += 0.35
                     reasons.append("fee type match")
 
