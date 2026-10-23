@@ -5,6 +5,7 @@ import { AgentVsHumanCard } from '@/components/case/AgentVsHumanCard'
 import { CaseBanners } from '@/components/case/CaseBanners'
 import { CaseLoadError } from '@/components/case/CaseLoadError'
 import { CaseSla } from '@/components/case/CaseSla'
+import { ChatCard } from '@/components/case/ChatCard'
 import { CluesCard } from '@/components/case/CluesCard'
 import { ComplaintCard } from '@/components/case/ComplaintCard'
 import { CustomerCard } from '@/components/case/CustomerCard'
@@ -87,6 +88,7 @@ export function CaseDetail() {
             <FraudOutcomeCard detail={detail} />
             <ReplyCard detail={detail} />
             <AgentVsHumanCard detail={detail} />
+            <ChatCard key={detail.case.complaint_id} detail={detail} />
             <RunsCard detail={detail} />
             <UsageCard detail={detail} />
           </div>
