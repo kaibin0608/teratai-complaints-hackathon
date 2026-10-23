@@ -63,6 +63,22 @@ export function formatDuration(ms: number): string {
   return `${mins}m`
 }
 
+/** 0.346 → "35%"; null (no data yet) → "–". */
+export function formatPercent(rate: number | null): string {
+  return rate === null ? '–' : `${Math.round(rate * 100)}%`
+}
+
+/** 3100 → "3.1 s", 850 → "850 ms"; null → "–". */
+export function formatMs(ms: number | null): string {
+  if (ms === null) return '–'
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${ms} ms`
+}
+
+/** A Cost string (RM, 4 decimals) as the backend sends it → "RM0.0013"; null → "–". */
+export function formatCost(cost: string | null): string {
+  return cost === null ? '–' : `RM${cost}`
+}
+
 /** "2026-09-30" (or a datetime) → "30-09-2026". */
 export function formatMytDate(value: IsoDate | IsoTime): string {
   const p = parseMyt(value)

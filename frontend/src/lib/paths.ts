@@ -8,6 +8,9 @@ export const paths = {
   officer: '/officer',
   fraud: '/fraud',
   manager: '/manager',
+  /** Every queue (manager). */
+  cases: '/cases',
+  audit: '/audit',
   case: (complaintId: string) => `/cases/${encodeURIComponent(complaintId)}`,
   /** Development only. */
   devUi: '/dev/ui',

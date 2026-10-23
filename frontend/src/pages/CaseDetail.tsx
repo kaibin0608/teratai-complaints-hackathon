@@ -1,11 +1,20 @@
 import { LoaderCircle } from 'lucide-react'
 import { useParams } from 'react-router'
+import { CaseActions } from '@/components/case/actions/CaseActions'
+import { AgentVsHumanCard } from '@/components/case/AgentVsHumanCard'
 import { CaseBanners } from '@/components/case/CaseBanners'
 import { CaseLoadError } from '@/components/case/CaseLoadError'
 import { CaseSla } from '@/components/case/CaseSla'
+import { ComplaintCard } from '@/components/case/ComplaintCard'
+import { CustomerCard } from '@/components/case/CustomerCard'
+import { DecisionCard } from '@/components/case/DecisionCard'
+import { EvidenceCard } from '@/components/case/EvidenceCard'
+import { MatchCard } from '@/components/case/MatchCard'
+import { ReplyCard } from '@/components/case/ReplyCard'
+import { TimelineCard } from '@/components/case/TimelineCard'
+import { UsageCard } from '@/components/case/UsageCard'
 import { Page } from '@/components/layout/Page'
 import { Badge } from '@/components/shared/Badge'
-import { Card } from '@/components/shared/Card'
 import { CategoryBadge } from '@/components/shared/CategoryBadge'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { QueueBadge } from '@/components/shared/QueueBadge'
@@ -14,7 +23,7 @@ import { WorkflowBadge } from '@/components/shared/WorkflowBadge'
 import { useCaseDetail } from '@/hooks/useCaseDetail'
 import { routeLabel } from '@/lib/labels'
 
-/** Shared case view; adapts to the signed-in role (PLAN.md §3, FRONTEND_BUILD.md screen 3). */
+/** Shared case view; adapts to the signed-in role (PLAN.md §3, FRONTEND_BUILD.md B2). */
 export function CaseDetail() {
   const { complaintId = '' } = useParams()
   const result = useCaseDetail(complaintId)
@@ -49,39 +58,26 @@ export function CaseDetail() {
         </>
       }
       actions={<CaseSla detail={detail} />}
+      footer={<CaseActions detail={detail} onChanged={result.reload} />}
     >
       <div className="flex flex-col gap-section">
         <CaseBanners detail={detail} />
         <div className="grid items-start gap-section lg:grid-cols-2">
           <div className="flex flex-col gap-section">
-            <Card title="Complaint">
-              <Pending piece="9b" />
-            </Card>
-            <Card title="Customer">
-              <Pending piece="9b" />
-            </Card>
-            <Card title="Evidence">
-              <Pending piece="9b" />
-            </Card>
+            <ComplaintCard detail={detail} />
+            <CustomerCard detail={detail} />
+            <EvidenceCard detail={detail} />
+            <MatchCard detail={detail} />
           </div>
           <div className="flex flex-col gap-section">
-            <Card title="Decision">
-              <Pending piece="9c" />
-            </Card>
-            <Card title="Reply">
-              <Pending piece="9c" />
-            </Card>
+            <DecisionCard detail={detail} />
+            <ReplyCard detail={detail} />
+            <AgentVsHumanCard detail={detail} />
+            <UsageCard detail={detail} />
           </div>
         </div>
-        <Card title="Timeline">
-          <Pending piece="9d" />
-        </Card>
+        <TimelineCard detail={detail} />
       </div>
     </Page>
   )
-}
-
-/** Placeholder until the card's piece is built. */
-function Pending({ piece }: { piece: string }) {
-  return <p className="text-sm text-secondary">Built in piece {piece}.</p>
 }

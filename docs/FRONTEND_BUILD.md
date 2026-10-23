@@ -37,7 +37,7 @@ React 19 · TypeScript 6 (strict) · Vite 8 · Tailwind CSS 4 (CSS-first tokens)
 
 ```
 frontend/src/
-├── api/          client.ts (fetch, token, ApiError), auth.ts, cases.ts (list, get, act)
+├── api/          client.ts (fetch, token, ApiError), auth.ts, cases.ts (list, get, act), metrics.ts, audit.ts, users.ts
 ├── assets/       teratai-logo.png
 ├── components/
 │   ├── layout/   AppLayout, Sidebar, UserCard, DemoClock, Page, route guards, navigation.ts
@@ -68,30 +68,26 @@ frontend/src/
 |---|---|
 | Foundation | Formatting, demo clock, API client, login state, routes + role guards, design tokens + fonts, layout (borderless sidebar + bordered panel), Login page, shared badges, dev UI kit (`/dev/ui`) |
 | Alignment | Types mirror UI_API.md; real backend instead of a mock; error shapes; queue and workflow badges |
-| Case page 9a | Data loading, header (category, priority, queue, workflow, route), SLA timers, banners (error, processing, escalated, held, sensitive), not-found and retry states |
+| Case page, read side | Header, SLA timers, banners; complaint, customer, **evidence per category**, match candidates, decision with calculation, **reply with invented IDs and amounts marked**, agent vs people, cost and speed, timeline with simulated outbound. Polls every 2 s only while the agent is working |
+| **B1. Cases page** | Queue tabs with live counts per role, polled every 4 s so new complaints appear on their own; sort, paging, tab in the URL |
+| **B3. Actions** | One decision bar and dialog for **every** platform action, with the rules in `lib/actions.ts` (headroom, escalate instead of approve, locked approve on a flagged reply, assigned-elsewhere and re-running notices). Covers the officer's and the fraud analyst's whole flow and the manager's second-tier approve / reject |
 
 ---
 
 ## Build order
 
-### B. Core UI (STATUS C1: main ranking, the 10-point human gate)
+### B. Core UI (STATUS C1: main ranking, the 10-point human gate): done
 
-Build first. Every check in the human-gate checklist ([USERFLOW.md §4](USERFLOW.md#4-flow-b-the-live-round-readme)) must be visible.
-
-| Piece | Screen | Endpoint |
-|---|---|---|
-| **B1. Cases page** | Queue tabs with count badges from `counts`: Awaiting approval · Fraud team · Auto-resolved · Approved · Rejected · Processing · Error. Rows show priority, category, customer, outcome and refund, `waiting_reason`, hold, vulnerable, self-check, resolve SLA. **Polls every 3–5 s**, so new cases appear on their own (`sort=recent` option). Click → case page | `GET /api/cases?queue=…` |
-| **B2. Case page cards** | Complaint (text, channel, language); customer and accounts; **evidence per category** (duplicate pair, transfer status and reversal, ATM journal, auth method, scam recipient, fee row); match candidates; **decision** (outcome, refund, priority, route, policy route vs held route, rule, calculation); **reply + self-check** (found IDs and amounts not in `allowed_*` highlighted); timeline (`events`) and outbound (Simulated); usage (cost, latency, models). Polls every 2 s while processing or re-running | `GET /api/cases/{id}` |
-| **B3. Actions** | Approve · Edit reply (shows the self-check problems; Approve locked while flagged) · Reject, all with a reason · fraud Acknowledge. Disabled while a request is in flight; on 409 re-fetch; redraw from the response | `POST /api/cases/{id}/approve` · `edit-reply` · `reject` · `acknowledge` |
+Every check in the human-gate checklist ([USERFLOW.md §4](USERFLOW.md#4-flow-b-the-live-round-readme)) is visible: a new case appears on its own, the matched transaction, evidence, decision, route, reply and self-check are on the case page, approval waits for a click, and fraud cases sit in the fraud queue.
 
 ### C. Bonus role screens (STATUS U1–U4)
 
-| Piece | Screen | Adds |
-|---|---|---|
-| **C1. Officer Resolution Desk** (U2) | Approval queue + case page with headroom ("Your limit: RM2,000. This refund: RM550. ✓"); **Escalate to manager** replaces Approve when over the limit or sensitive; Send back; Flag sensitive | `escalate`, `send-back`, `flag-sensitive`; the 403 `limit` error |
-| **C2. Fraud Investigation Workbench** (U3) | Fraud queue; transaction and auth method first; timeline; Acknowledge → Log investigation / recall → Record outcome; Escalate when the disputed amount is over RM5,000 or sensitive | `investigate`, `record-outcome`, `escalate` with `outcome` |
-| **C3. Manager Console** (U4) | Tiles; escalation queue (`workflow=escalated`) with second-tier approve / reject and the proposal; all cases with reassign; audit log; agent vs human (`overridden=true`) | `GET /api/metrics?as_of=`, `GET /api/audit`, `GET /api/users`, `second-tier-approve`, `second-tier-reject`, `reassign` |
-| (U1 is done: Login page, role redirect, role-aware menu) | | |
+| Piece | Status |
+|---|---|
+| **U1 Login, role redirect, role-aware menu** | Done |
+| **U2 Officer Resolution Desk** | Done: approval queue, headroom, Escalate instead of Approve over the limit or when sensitive, Send back, Flag sensitive, Edit reply with the self-check result beside it |
+| **U3 Fraud Investigation Workbench** | Done: fraud queue; auth method in large type; Acknowledge → Log investigation / recall → Record outcome; Escalate with a proposed outcome |
+| **U4 Manager Console** | Done: `/manager` has nine metric tiles (`GET /api/metrics?as_of=<demo clock>`, polled every 10 s) and the escalation queue (`workflow=escalated`, both teams, with who escalated and why; second-tier approve / reject on the case page). `/cases` shows every queue. `/audit` is the audit log with filters from the log's own facets, "people only", load more and **CSV export**. **Reassign** is a manager button on every open case (people from `GET /api/users`) |
 
 ### D. Extras (only if time is left)
 

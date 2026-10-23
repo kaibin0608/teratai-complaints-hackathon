@@ -4,7 +4,9 @@ import { HomeRedirect } from '@/components/layout/HomeRedirect'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { PublicOnlyRoute } from '@/components/layout/PublicOnlyRoute'
 import { paths } from '@/lib/paths'
+import { AuditLog } from '@/pages/AuditLog'
 import { CaseDetail } from '@/pages/CaseDetail'
+import { Cases } from '@/pages/Cases'
 import { FraudWorkbench } from '@/pages/FraudWorkbench'
 import { Intake } from '@/pages/Intake'
 import { Login } from '@/pages/Login'
@@ -47,7 +49,11 @@ export const router = createBrowserRouter([
           },
           {
             element: <ProtectedRoute roles={['manager']} />,
-            children: [{ path: paths.manager, element: <ManagerConsole /> }],
+            children: [
+              { path: paths.manager, element: <ManagerConsole /> },
+              { path: paths.cases, element: <Cases /> },
+              { path: paths.audit, element: <AuditLog /> },
+            ],
           },
         ],
       },

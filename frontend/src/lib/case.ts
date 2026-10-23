@@ -1,5 +1,14 @@
 /** Case rules the UI derives from the backend's case detail (everything else comes ready-made). */
-import type { AuditEvent, CaseDetail, IsoTime } from './types'
+import { parseMyt } from './format'
+import type { AuditEvent, CaseDetail, IsoDate, IsoTime } from './types'
+
+/** Age in whole years on a given day (the 65+ rule uses the received date). */
+export function ageOn(dateOfBirth: IsoDate, day: IsoDate | IsoTime): number {
+  const dob = parseMyt(dateOfBirth)
+  const on = parseMyt(day)
+  const hadBirthday = on.month > dob.month || (on.month === dob.month && on.day >= dob.day)
+  return on.year - dob.year - (hadBirthday ? 0 : 1)
+}
 
 /** Still waiting for people: in an approval or fraud queue, and not closed on the platform. */
 export function isOpen({ case: c }: CaseDetail): boolean {

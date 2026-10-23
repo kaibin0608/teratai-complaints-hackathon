@@ -6,11 +6,13 @@ interface PageProps {
   meta?: ReactNode
   /** Right-aligned header actions; keep at most one primary button per view. */
   actions?: ReactNode
+  /** A bar pinned below the scrolling content (e.g. a case's decision bar). */
+  footer?: ReactNode
   children?: ReactNode
 }
 
-/** A screen inside the content panel: title bar with a hairline, then scrolling content. */
-export function Page({ title, meta, actions, children }: PageProps) {
+/** A screen inside the content panel: title bar with a hairline, scrolling content, optional pinned footer. */
+export function Page({ title, meta, actions, footer, children }: PageProps) {
   return (
     <>
       <header className="flex h-header shrink-0 items-center justify-between gap-4 border-b border-default px-card">
@@ -21,6 +23,7 @@ export function Page({ title, meta, actions, children }: PageProps) {
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </header>
       <div className="min-h-0 flex-1 overflow-auto p-card">{children}</div>
+      {footer && <footer className="shrink-0 border-t border-default bg-card px-card py-3">{footer}</footer>}
     </>
   )
 }

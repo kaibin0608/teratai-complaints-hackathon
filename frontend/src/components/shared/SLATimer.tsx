@@ -13,8 +13,8 @@ interface SLATimerProps {
   /** Start of the SLA window (the complaint's received_at). */
   start: IsoTime
   due: IsoTime
-  /** e.g. "Ack" or "Resolve". */
-  label: string
+  /** e.g. "Ack" or "Resolve". Omit where the context names the deadline (a table column). */
+  label?: string
   /** When the deadline was met (e.g. first acknowledgement); stops the countdown. */
   doneAt?: IsoTime | null
 }
@@ -24,8 +24,8 @@ export function SLATimer({ start, due, label, doneAt }: SLATimerProps) {
   if (doneAt) {
     const late = mytToMs(doneAt) > mytToMs(due)
     return (
-      <Badge tone={late ? 'error' : 'success'} icon={CircleCheck} title={`${label} done ${formatIsoTime(doneAt)}`}>
-        {label} · {late ? 'met late' : 'met'}
+      <Badge tone={late ? 'error' : 'success'} icon={CircleCheck} title={`${label ?? 'Deadline'} done ${formatIsoTime(doneAt)}`}>
+        {withLabel(label, late ? 'met late' : 'met')}
       </Badge>
     )
   }
@@ -37,8 +37,10 @@ function Countdown({ start, due, label }: Omit<SLATimerProps, 'doneAt'>) {
   const { state, remainingMs } = slaStatus(start, due, mytToMs(now))
   const time = formatDuration(remainingMs)
   return (
-    <Badge tone={stateTone[state]} icon={AlarmClock} title={`${label} due ${formatIsoTime(due)}`}>
-      {label} · {state === 'breached' ? `overdue ${time}` : `${time} left`}
+    <Badge tone={stateTone[state]} icon={AlarmClock} title={`${label ?? 'Deadline'} due ${formatIsoTime(due)}`}>
+      {withLabel(label, state === 'breached' ? `overdue ${time}` : `${time} left`)}
     </Badge>
   )
 }
+
+const withLabel = (label: string | undefined, text: string) => (label ? `${label} · ${text}` : text)
