@@ -45,14 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // A 401 on a signed-in request ends the session, and says so on the login page.
-  const { show } = useToast()
+  const { show, clearHistory } = useToast()
   useEffect(() => {
     setUnauthorizedHandler(() => {
       logout()
+      clearHistory()
       show({ tone: 'warning', title: 'Your session has ended', description: 'Sign in again to carry on.' })
     })
     return () => setUnauthorizedHandler(null)
-  }, [logout, show])
+  }, [logout, show, clearHistory])
 
   // Restore a saved session once on load.
   useEffect(() => {

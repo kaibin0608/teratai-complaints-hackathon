@@ -1,20 +1,13 @@
-import { CircleAlert, CircleCheck, Info, TriangleAlert, X, type LucideIcon } from 'lucide-react'
+import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import type { Toast, ToastTone } from '@/context/toast-context'
 import { useToast } from '@/hooks/useToast'
 import { cx } from '@/lib/cx'
+import { TONE } from './toastTone'
 
 /** Long enough to read two lines; errors stay longer. Hovering or focusing a toast pauses it. */
 const DURATION_MS: Record<ToastTone, number> = { success: 5000, info: 5000, neutral: 5000, warning: 7000, error: 9000 }
-
-const TONE: Record<ToastTone, { icon: LucideIcon; iconClass: string; bar: string }> = {
-  success: { icon: CircleCheck, iconClass: 'text-success-500', bar: 'bg-success-500' },
-  info: { icon: Info, iconClass: 'text-info-500', bar: 'bg-info-500' },
-  neutral: { icon: CircleCheck, iconClass: 'text-neutral-500', bar: 'bg-neutral-400' },
-  warning: { icon: TriangleAlert, iconClass: 'text-warning-500', bar: 'bg-warning-400' },
-  error: { icon: CircleAlert, iconClass: 'text-error-500', bar: 'bg-error-500' },
-}
 
 /**
  * Bottom-right stack, newest on top, raised clear of the case page's action bar (its Approve button sits bottom-right). Successes are announced politely, errors at once; a toast never takes focus.

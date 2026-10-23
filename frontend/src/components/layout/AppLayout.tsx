@@ -18,6 +18,7 @@ export function AppLayout() {
       <div className="flex h-dvh gap-frame p-frame">
         <Sidebar user={auth.user} onSignOut={() => {
             auth.logout()
+            toast.clearHistory()
             toast.show({ tone: 'neutral', title: 'You have signed out' })
           }} />
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-card border border-default bg-card shadow-card">

@@ -17,10 +17,26 @@ export interface Toast extends ToastInput {
   id: number
 }
 
+/** A past notification, kept for the bell's list. */
+export interface Notice extends Toast {
+  /** Epoch ms. */
+  at: number
+  read: boolean
+}
+
 export interface ToastApi {
   toasts: readonly Toast[]
+  /** Newest first; only what this browser tab saw (the backend keeps no per-user notifications). */
+  history: readonly Notice[]
+  unread: number
+  /** A toast now, and an entry in the history. */
   show: (toast: ToastInput) => void
+  /** An entry in the history only: for background changes that should not interrupt (e.g. new cases arrived). */
+  record: (notice: ToastInput) => void
   dismiss: (id: number) => void
+  markAllRead: () => void
+  /** On sign-out: the next person on this tab must not see the last one's notifications. */
+  clearHistory: () => void
 }
 
 export const ToastContext = createContext<ToastApi | null>(null)
