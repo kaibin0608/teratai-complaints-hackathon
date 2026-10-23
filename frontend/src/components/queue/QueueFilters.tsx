@@ -58,7 +58,7 @@ export function QueueFilters({ params, workflowCounts, showChanged, onChange, on
             type="text"
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder="Search case, customer, subject"
+            placeholder="Search case or customer"
             aria-label="Search cases"
             className={cx('h-9 w-full pr-9 pl-9', controlClass)}
           />
