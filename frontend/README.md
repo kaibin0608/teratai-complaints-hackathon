@@ -13,7 +13,7 @@ It builds only against the backend's UI contract, [`docs/UI_API.md`](../docs/UI_
 # Frontend
 cd frontend
 npm install
-npm run dev          # http://localhost:5173
+npm run dev          # http://localhost:5173 (or double-click frontend.bat in the repo root: same, plus --host for other laptops)
 ```
 
 Sign in as `officer1`, `officer2`, `fraud1` or `manager1` with password `teratai123`.
