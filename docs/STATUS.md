@@ -84,7 +84,7 @@ Last updated: 2026-10-23, after the frontend merge (`88d1e2f`).
 - [ ] S3 · `dev` → `main`, then PR `Submission: Santa_Claude` with `predictions.csv`, the freeze commit hash and the API URL (before 15:00) *(B)*
 - [ ] S4 · End-to-end demo test of the 3 flows: within the limit, over the limit → manager, fraud *(all, after B and U)*
 - [ ] S5 · Live-round rehearsal: post example and messy complaints, watch them appear in the UI, approve one *(all, after C1)*
-- [ ] S6 · Fill the demo database with the 750 test cases: `python -m backend.batch.runner --ids test --db backend/api.db` *(B)*
+- [x] S6 · Fill the demo database with the 750 test cases: `python -m backend.batch.runner --ids test --db backend/api.db` *(B)*. Done on the server laptop: 800 cases (750 test + 50 from api_check), 0 errors; queues 304 awaiting approval, 158 fraud, 335 auto-resolved. Loaded from the cache, so the dashboard's cost and latency tiles read near zero: quote ~RM0.001 and ~4 s per complaint in the demo
 - [ ] S7 · Keep the server running from 15:00 until the demo; keep the laptop awake *(B)*
 - [x] S8 · Run guide [RUNNING.md](RUNNING.md): setup, start, make reachable (Wi-Fi or tunnel), check, fill the demo database, regenerate the submission, recovery table, logins, submission steps *(B)*
 
