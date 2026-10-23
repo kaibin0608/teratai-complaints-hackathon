@@ -32,7 +32,7 @@ export function Policy() {
         </Badge>
       }
     >
-      <div className="flex max-w-6xl flex-col gap-section">
+      <div className="flex flex-col gap-section">
         <p className="text-sm text-secondary">
           Fixed by the bank. These are the rules the agent applies to every complaint, read straight from the bank&apos;s policy files, so what you see is what it uses.
         </p>
