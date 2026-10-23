@@ -53,7 +53,7 @@ function allowedFacts(ids: readonly string[], amounts: readonly string[]): strin
 
 function ReplyText({ text, allowedIds, allowedAmounts }: { text: string; allowedIds: string[]; allowedAmounts: string[] }) {
   return (
-    <p className="rounded-control bg-subtle px-3 py-2.5 text-sm leading-relaxed whitespace-pre-line text-body">
+    <p className="rounded-control bg-subtle px-3 py-2.5 text-sm leading-relaxed whitespace-pre-line text-body [overflow-wrap:anywhere]">
       {highlightReply(text, allowedIds, allowedAmounts).map((segment, index) =>
         segment.flagged ? (
           <mark

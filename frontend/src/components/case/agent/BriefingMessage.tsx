@@ -11,7 +11,7 @@ export function BriefingMessage({ detail }: { detail: CaseDetail }) {
   return (
     <div className="flex flex-col gap-2">
       {paragraphs.map((text) => (
-        <p key={text} className="text-sm leading-relaxed text-primary">
+        <p key={text} className="text-sm leading-relaxed text-primary [overflow-wrap:anywhere]">
           {text}
         </p>
       ))}
@@ -34,7 +34,7 @@ export function BriefingMessage({ detail }: { detail: CaseDetail }) {
                   <li key={step.label} className="relative text-sm">
                     <Icon size={14} aria-hidden className={cx('absolute top-0.5 -left-[1.4rem] bg-card', step.state === 'done' ? 'text-success-500' : 'text-warning-500')} />
                     <span className="font-medium text-primary">{step.label}</span>
-                    <span className="block text-secondary">{step.detail}</span>
+                    <span className="block text-secondary [overflow-wrap:anywhere]">{step.detail}</span>
                   </li>
                 )
               })}

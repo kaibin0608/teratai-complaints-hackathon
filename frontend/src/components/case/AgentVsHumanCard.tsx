@@ -74,7 +74,7 @@ function ReplyBox({ title, text }: { title: string; text: string }) {
   return (
     <div>
       <h4 className="mb-1 text-xs font-medium text-secondary">{title}</h4>
-      <p className="rounded-control bg-subtle px-3 py-2 text-sm whitespace-pre-line text-body">{text}</p>
+      <p className="rounded-control bg-subtle px-3 py-2 text-sm whitespace-pre-line text-body [overflow-wrap:anywhere]">{text}</p>
     </div>
   )
 }

@@ -70,7 +70,7 @@ export function AgentPane({ detail }: { detail: CaseDetail }) {
           </Message>
           {turns.map((turn, index) => (
             <Message key={index} from={turn.role === 'user' ? 'you' : 'agent'}>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{turn.content}</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">{turn.content}</p>
             </Message>
           ))}
           {busy && (

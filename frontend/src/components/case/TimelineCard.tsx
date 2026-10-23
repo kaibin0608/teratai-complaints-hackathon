@@ -70,7 +70,7 @@ function OutboundRow({ message }: { message: CaseDetail['outbound'][number] }) {
       {refund && <p className="text-sm text-body">Refund {formatMoney(message.refund_amount_myr)}</p>}
       <details className="mt-1">
         <summary className="cursor-pointer text-sm text-link select-none hover:text-link-hover">Show message</summary>
-        <p className="mt-1 rounded-control bg-subtle px-3 py-2 text-sm whitespace-pre-line text-body">{message.reply_text}</p>
+        <p className="mt-1 rounded-control bg-subtle px-3 py-2 text-sm whitespace-pre-line text-body [overflow-wrap:anywhere]">{message.reply_text}</p>
       </details>
       <Meta at={message.created_at} who={`authorised by ${nameOf(message.authorised_by)}`} />
     </>

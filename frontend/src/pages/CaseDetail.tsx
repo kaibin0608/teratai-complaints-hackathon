@@ -65,9 +65,14 @@ export function CaseDetail() {
     >
       <div className="flex flex-col gap-section xl:h-full">
         <CaseBanners detail={detail} />
-        <div className="grid items-start gap-section xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_27rem]">
-          <AgentPane key={detail.case.complaint_id} detail={detail} />
-          <CaseTabs key={`tabs-${detail.case.complaint_id}`} detail={detail} />
+        {/* Details left, the agent on the right. Stacked on narrower screens, the agent comes first. */}
+        <div className="grid items-start gap-section xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_33rem]">
+          <div className="min-w-0 xl:order-1 xl:h-full xl:min-h-0">
+            <CaseTabs key={`tabs-${detail.case.complaint_id}`} detail={detail} />
+          </div>
+          <div className="-order-1 min-w-0 xl:order-2 xl:h-full xl:min-h-0">
+            <AgentPane key={detail.case.complaint_id} detail={detail} />
+          </div>
         </div>
       </div>
     </Page>

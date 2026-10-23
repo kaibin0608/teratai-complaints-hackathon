@@ -29,7 +29,7 @@ export function ComplaintCard({ detail }: { detail: CaseDetail }) {
           { label: 'Subject', value: complaint.subject },
         ]}
       />
-      <p className="mt-3 rounded-control bg-subtle px-3 py-2.5 text-sm leading-relaxed whitespace-pre-line text-body">
+      <p className="mt-3 rounded-control bg-subtle px-3 py-2.5 text-sm leading-relaxed whitespace-pre-line text-body [overflow-wrap:anywhere]">
         {complaint.text}
       </p>
       {otherIssues.length > 0 && (
