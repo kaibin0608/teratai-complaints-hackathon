@@ -1,5 +1,6 @@
 import { formatPercent } from '@/lib/format'
 import { ChartCard } from './ChartCard'
+import { BAR_FILL, type ChartTone } from './chartTones'
 
 export interface BarItem {
   label: string
@@ -14,13 +15,14 @@ interface BarCardProps {
   sort?: boolean
   /** Noun for the table's count column. */
   unit?: string
+  tone?: ChartTone
 }
 
 /**
  * "How many of each?" as horizontal bars: one hue, since identity is in the label. The value sits at the bar tip.
  * Marks follow the data-viz spec: thin bars, a 4px rounded data end, square on the baseline.
  */
-export function BarCard({ title, subtitle, items, sort = true, unit = 'Cases' }: BarCardProps) {
+export function BarCard({ title, subtitle, items, sort = true, unit = 'Cases', tone = 'teal' }: BarCardProps) {
   const rows = sort ? [...items].sort((a, b) => b.value - a.value) : items
   const total = rows.reduce((sum, row) => sum + row.value, 0)
   const max = Math.max(1, ...rows.map((row) => row.value))
@@ -47,7 +49,7 @@ export function BarCard({ title, subtitle, items, sort = true, unit = 'Cases' }:
               >
                 <span className="text-sm leading-tight text-body">{row.label}</span>
                 <span className="flex items-center gap-2">
-                  {row.value > 0 && <span aria-hidden className="h-2.5 rounded-r-[4px] bg-data" style={{ width: `${(row.value / max) * 100}%`, minWidth: 4 }} />}
+                  {row.value > 0 && <span aria-hidden className={`h-2.5 rounded-r-[4px] ${BAR_FILL[tone]}`} style={{ width: `${(row.value / max) * 100}%`, minWidth: 4 }} />}
                   <span className="text-xs whitespace-nowrap text-primary tabular-nums">
                     {row.value}
                     <span className="ml-1 text-secondary">{formatPercent(share(row.value))}</span>

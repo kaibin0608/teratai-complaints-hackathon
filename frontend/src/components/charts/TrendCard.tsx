@@ -2,6 +2,7 @@ import { useState, type MouseEvent } from 'react'
 import { categoryLabel } from '@/lib/labels'
 import { CATEGORIES, type Metrics } from '@/lib/types'
 import { ChartCard } from './ChartCard'
+import { COLUMN_FILL } from './chartTones'
 
 type Day = Metrics['trends']['received_by_day'][number]
 
@@ -78,7 +79,7 @@ export function TrendCard({ days }: { days: readonly Day[] }) {
                 return (
                   <g key={d.date}>
                     {hover === i && <rect x={MARGIN.left + i * step} y={MARGIN.top} width={step} height={PLOT_H} className="fill-neutral-50" />}
-                    {d.total > 0 && <path d={columnPath(x, y(d.total), barWidth, height)} className="fill-data" />}
+                    {d.total > 0 && <path d={columnPath(x, y(d.total), barWidth, height)} className={COLUMN_FILL.teal} />}
                   </g>
                 )
               })}

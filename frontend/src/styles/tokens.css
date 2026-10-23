@@ -111,9 +111,6 @@
   --color-chart-5: #2f7fd6;
   --color-chart-6: #7a6e7c;
 
-  /* The one hue for the "how many" marks (bars, columns). Calm on purpose: brand pink and the status colours stay for actions and alerts. */
-  --color-data: var(--color-teal-500);
-
   /* Semantic — surfaces: bg-page, bg-card, bg-subtle, bg-selected, bg-inverse.
      The sidebar sits on bg-page with no border; only the content panel (bg-card) is bordered. */
   --background-color-page: var(--color-neutral-25);
