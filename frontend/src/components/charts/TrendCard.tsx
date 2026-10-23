@@ -2,7 +2,7 @@ import { useState, type MouseEvent } from 'react'
 import { categoryLabel } from '@/lib/labels'
 import { CATEGORIES, type Metrics } from '@/lib/types'
 import { ChartCard } from './ChartCard'
-import { COLUMN_FILL } from './chartTones'
+import { BAR_COLOURS, SEGMENT_FILLS } from './chartTones'
 
 type Day = Metrics['trends']['received_by_day'][number]
 
@@ -29,7 +29,7 @@ function columnPath(x: number, y: number, width: number, height: number): string
   return `M${x},${y + height} V${y + r} Q${x},${y} ${x + r},${y} H${x + width - r} Q${x + width},${y} ${x + width},${y + r} V${y + height} Z`
 }
 
-/** Complaints received per day (the day the complaint arrived, not when it was processed). One series, so one hue. */
+/** Complaints received per day (the day the complaint arrived, not when it was processed), stacked by category. A category keeps its colour here and in "By category". */
 export function TrendCard({ days }: { days: readonly Day[] }) {
   const [hover, setHover] = useState<number | null>(null)
   const max = niceMax(Math.max(1, ...days.map((d) => d.total)))
@@ -51,12 +51,13 @@ export function TrendCard({ days }: { days: readonly Day[] }) {
     <ChartCard
       title="Complaints received per day"
       subtitle={days.length > 0 ? `${days.length} days, ${shortDate(days[0]!.date)} to ${shortDate(days[days.length - 1]!.date)}` : undefined}
-      table={{ head: ['Day', 'Complaints'], rows: days.map((d) => [d.date, d.total]) }}
+      table={{ head: ['Day', 'Complaints', ...CATEGORIES.map((c) => categoryLabel[c])], rows: days.map((d) => [d.date, d.total, ...CATEGORIES.map((c) => d.by_category[c])]) }}
       chart={
         days.length === 0 ? (
           <p className="py-6 text-center text-sm text-secondary">Nothing yet.</p>
         ) : (
           <div className="relative overflow-x-auto">
+            <Legend />
             <svg
               viewBox={`0 0 ${W} ${H}`}
               role="img"
@@ -79,7 +80,7 @@ export function TrendCard({ days }: { days: readonly Day[] }) {
                 return (
                   <g key={d.date}>
                     {hover === i && <rect x={MARGIN.left + i * step} y={MARGIN.top} width={step} height={PLOT_H} className="fill-neutral-50" />}
-                    {d.total > 0 && <path d={columnPath(x, y(d.total), barWidth, height)} className={COLUMN_FILL} />}
+                    {d.total > 0 && <Column day={d} x={x} width={barWidth} top={y(d.total)} height={height} />}
                   </g>
                 )
               })}
@@ -100,8 +101,11 @@ export function TrendCard({ days }: { days: readonly Day[] }) {
                   {active.date}: {active.total} complaint{active.total === 1 ? '' : 's'}
                 </p>
                 {CATEGORIES.filter((c) => active.by_category[c] > 0).map((c) => (
-                  <p key={c} className="flex justify-between gap-2 text-neutral-200">
-                    <span>{categoryLabel[c]}</span>
+                  <p key={c} className="flex items-center justify-between gap-2 text-neutral-200">
+                    <span className="flex items-center gap-1.5">
+                      <span aria-hidden className={`size-2 rounded-full ${BAR_COLOURS[CATEGORIES.indexOf(c)]}`} />
+                      {categoryLabel[c]}
+                    </span>
                     <span className="tabular-nums">{active.by_category[c]}</span>
                   </p>
                 ))}
@@ -111,5 +115,40 @@ export function TrendCard({ days }: { days: readonly Day[] }) {
         )
       }
     />
+  )
+}
+
+/** One day's column: a segment per category, stacked bottom-up in the legend's order, with a 4px rounded top. */
+function Column({ day, x, width, top, height }: { day: Day; x: number; width: number; top: number; height: number }) {
+  const present = CATEGORIES.map((category, index) => ({ category, index, value: day.by_category[category] })).filter((entry) => entry.value > 0)
+  const segments = present.map((entry, position) => {
+    const below = present.slice(0, position).reduce((sum, other) => sum + other.value, 0)
+    const h = (entry.value / day.total) * height
+    return { category: entry.category, index: entry.index, h, y: top + height - (below / day.total) * height - h }
+  })
+  const last = segments.length - 1
+  return (
+    <g>
+      {segments.map((segment, position) =>
+        position === last ? (
+          <path key={segment.category} d={columnPath(x, segment.y, width, segment.h)} className={`${SEGMENT_FILLS[segment.index]} stroke-white`} strokeWidth={1} />
+        ) : (
+          <rect key={segment.category} x={x} y={segment.y} width={width} height={segment.h} className={`${SEGMENT_FILLS[segment.index]} stroke-white`} strokeWidth={1} />
+        ),
+      )}
+    </g>
+  )
+}
+
+function Legend() {
+  return (
+    <ul className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-secondary">
+      {CATEGORIES.map((category, index) => (
+        <li key={category} className="flex items-center gap-1.5">
+          <span aria-hidden className={`size-2.5 rounded-full ${BAR_COLOURS[index]}`} />
+          {categoryLabel[category]}
+        </li>
+      ))}
+    </ul>
   )
 }

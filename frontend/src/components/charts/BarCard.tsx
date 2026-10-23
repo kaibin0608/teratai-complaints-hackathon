@@ -50,7 +50,9 @@ export function BarCard({ title, subtitle, items, sort = true, unit = 'Cases' }:
               >
                 <span className="text-sm leading-tight text-body">{row.label}</span>
                 <span className="flex items-center gap-2">
-                  {row.value > 0 && <span aria-hidden className={`h-2.5 rounded-r-[4px] ${row.colour}`} style={{ width: `${(row.value / max) * 100}%`, minWidth: 4 }} />}
+                  <span aria-hidden className="relative h-2.5 flex-1 rounded-[4px] bg-neutral-50">
+                    {row.value > 0 && <span className={`absolute inset-y-0 left-0 rounded-[4px] ${row.colour}`} style={{ width: `${(row.value / max) * 100}%`, minWidth: 4 }} />}
+                  </span>
                   <span className="text-xs whitespace-nowrap text-primary tabular-nums">
                     {row.value}
                     <span className="ml-1 text-secondary">{formatPercent(share(row.value))}</span>
