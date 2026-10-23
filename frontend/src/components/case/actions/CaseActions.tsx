@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { Button } from '@/components/shared/Button'
 import { useAuth } from '@/hooks/useAuth'
 import { planActions, type ActionKey, type LimitInfo } from '@/lib/actions'
-import { recommendedAction } from '@/lib/briefing'
 import { formatMoney } from '@/lib/format'
 import type { CaseDetail } from '@/lib/types'
 import { ActionDialog } from './ActionDialog'
@@ -28,7 +27,6 @@ export function CaseActions({ detail, onChanged }: CaseActionsProps) {
 
   const { actions, notice, limit } = planActions(detail, auth.user, nameOf)
   if (actions.length === 0 && !notice) return null
-  const recommended = recommendedAction(detail, auth.user, nameOf)
 
   return (
     <>
@@ -41,12 +39,7 @@ export function CaseActions({ detail, onChanged }: CaseActionsProps) {
           {actions.map(({ key, emphasis, disabledReason }) => {
             const { label, icon: Icon } = ACTIONS[key]
             return (
-              <span key={key} title={disabledReason} className="relative">
-                {key === recommended && (
-                  <span className="pointer-events-none absolute -top-2.5 left-1/2 z-10 -translate-x-1/2 rounded-badge bg-brand-600 px-1.5 text-[10px] font-medium whitespace-nowrap text-white">
-                    Agent recommends
-                  </span>
-                )}
+              <span key={key} title={disabledReason}>
                 <Button
                   variant={emphasis === 'danger' ? 'danger-outline' : emphasis}
                   disabled={Boolean(disabledReason)}

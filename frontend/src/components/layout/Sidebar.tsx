@@ -55,7 +55,7 @@ export function Sidebar({ user, onSignOut }: SidebarProps) {
                   </span>
                   <span className="hidden xl:inline">{label}</span>
                   {count ? (
-                    <span title={`${count} waiting`} className="ml-auto hidden rounded-badge bg-brand-50 px-1.5 text-[11px] font-medium text-brand-800 tabular-nums xl:inline">
+                    <span title={`${count} waiting`} className="ml-auto hidden rounded-badge bg-brand-600 px-1.5 text-[11px] font-medium text-white tabular-nums xl:inline">
                       {count}
                     </span>
                   ) : null}

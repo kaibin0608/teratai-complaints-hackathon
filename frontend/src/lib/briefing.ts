@@ -2,12 +2,9 @@
  * What the agent says when you open a case: a short briefing, and the steps behind it.
  * Built only from the stored decision, so nothing here is generated or invented: it is the case's own facts, in words.
  */
-import { planActions, type ActionKey } from './actions'
-import { isOpen } from './case'
 import { formatMoney } from './format'
 import { categoryLabel, holdReasonHelp, holdReasonLabel, outcomeLabel, routeLabel } from './labels'
-import type { NameOf } from './people'
-import type { CaseDetail, User } from './types'
+import type { CaseDetail } from './types'
 
 export interface TraceStep {
   label: string
@@ -110,18 +107,6 @@ export function buildSteps(detail: CaseDetail): TraceStep[] {
     state: decision.hold_reason ? 'check' : 'done',
   })
   return steps
-}
-
-/**
- * The one action the agent’s own findings back: the primary button of this person's plan, but only when the agent is
- * sure of its work (no hold, reply checked). A person still presses it; the agent only points at it.
- */
-export function recommendedAction(detail: CaseDetail, user: User, nameOf: NameOf): ActionKey | null {
-  if (!isOpen(detail) || detail.case.status !== 'done' || !detail.decision || detail.decision.hold_reason) return null
-  if (detail.reply?.self_check && !detail.reply.self_check.passed) return null
-  const primary = planActions(detail, user, nameOf).actions.find((action) => action.emphasis === 'primary' && !action.disabledReason)
-  // Closing a fraud case is a human judgement; the agent never points at it.
-  return primary && primary.key !== 'record-outcome' ? primary.key : null
 }
 
 /** Questions worth asking about this particular case, most useful first. */
