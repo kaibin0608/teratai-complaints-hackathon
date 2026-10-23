@@ -32,7 +32,7 @@ Route = Literal["AUTO_RESOLVE", "HUMAN_APPROVAL", "FRAUD_TEAM"]
 MatchStatus = Literal["confident", "ambiguous", "none", "not_applicable"]
 HoldReason = Literal[
     "customer_not_found", "ambiguous_match", "no_match", "category_revised", "self_check_failed",
-    "unknown_auth_method", "llm_error",
+    "unknown_auth_method", "llm_error", "second_issue",
 ]
 RunKind = Literal["autonomous", "reprocess"]
 FeeType = Literal["Monthly service charge", "Debit card annual fee", "Credit card annual fee"]  # fee_schedule.csv fee_name
@@ -227,6 +227,13 @@ class LLMUsage(BaseModel):
     cached: bool = False
 
 
+class OtherIssue(BaseModel):
+    """A second problem in the same complaint, found by the issues check and verified in code (quote in the text)."""
+
+    category: Category
+    quote: str
+
+
 class AgentRun(BaseModel):
     """One immutable pipeline run. The autonomous run is what predictions.csv exports."""
 
@@ -243,6 +250,8 @@ class AgentRun(BaseModel):
     error: str | None = None
     extract_usage: LLMUsage = Field(default_factory=LLMUsage)
     draft_usage: list[LLMUsage] = Field(default_factory=list)
+    other_issues: list[OtherIssue] = Field(default_factory=list)  # verified second issues (hold: second_issue)
+    issues_usage: LLMUsage | None = None  # the issues check's call; None when skipped (fake / LLM_ISSUES=off)
     prompt_version: str = "v0"
     schema_version: str = "v0"
     policy_version: str = "v0"

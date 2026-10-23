@@ -23,7 +23,7 @@ ITEM_KEYS = {"complaint_id", "customer_id", "customer_name", "received_at", "cha
              "self_check", "vulnerable", "resolve_due_at", "waiting_reason", "human_action", "updated_at",
              # bonus platform (b-ops-platform)
              "workflow", "sensitive", "sensitive_reason", "assigned_to", "escalation", "overridden"}
-DETAIL_KEYS = {"case", "complaint", "customer", "clues", "match", "decision", "evidence", "reply", "usage", "runs",
+DETAIL_KEYS = {"case", "complaint", "customer", "clues", "match", "decision", "evidence", "other_issues", "reply", "usage", "runs",
                "events", "outbound", "draft_reply", "fraud_outcome", "autonomous", "final", "differs"}
 CASE_KEYS = {"complaint_id", "status", "queue", "case_state", "sent", "error", "waiting_reason", "human_action",
              "autonomous_run_id", "current_run_id", "created_at", "updated_at",

@@ -21,6 +21,20 @@ TOPIC = {
            "SCAM_TRANSFER": "pemindahan wang akibat penipuan", "FEE_DISPUTE": "caj pada akaun anda",
            "SERVICE_QUALITY": "pengalaman anda bersama kami"},
 }
+ALSO_RAISED = {  # one sentence for a second issue in the same complaint (backend/agent/issues.py); promises nothing
+    "EN": "We have also noted your concern about {topic} and passed it to the team concerned.",
+    "MS": "Kami juga telah mencatat kebimbangan anda berkenaan {topic} dan memaklumkannya kepada pihak yang berkenaan.",
+}
+
+
+def also_raised(language: str, categories: list[str] | tuple[str, ...]) -> str | None:
+    """The also-raised sentence for second issues, or None when there are none."""
+    if not categories:
+        return None
+    joiner = " and " if language == "EN" else " dan "
+    return ALSO_RAISED[language].format(topic=joiner.join(TOPIC[language][c] for c in categories))
+
+
 SAFETY_ADVICE = {  # the only advice a reply may give (decided with Dev B)
     "SCAM_TRANSFER": {
         "EN": ["Please never share your OTP, PIN or online banking password with anyone, including callers who say "

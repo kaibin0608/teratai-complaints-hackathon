@@ -10,3 +10,4 @@ def offline_llm(request, monkeypatch):
         return
     monkeypatch.setattr(config, "LLM_EXTRACT", "fake:keywords")
     monkeypatch.setattr(config, "LLM_DRAFT", "fake:template")
+    monkeypatch.setattr(config, "LLM_ISSUES", "")  # follows LLM_EXTRACT, so it's fake too

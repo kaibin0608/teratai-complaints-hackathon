@@ -239,6 +239,42 @@ The bonus platform: logins for 4 seeded users, role-filtered reads, two-tier app
 - **`AUTH_REQUIRED` stays off** until the UI's login page exists. `JWT_SECRET` is in `config.py`, approved by Dev A.
 - **SLA compliance** compares our handling time with the policy's allowance (`resolve_due_at − received_at`), so the complaints being dated in the past doesn't make everything overdue.
 
+## Second-issue check (b-second-issue)
+
+A complaint can raise two problems ("transfer failed… pastu ada caj fee pulak"). The extractor gives one category, so the second was dropped, and when the main one auto-resolved nobody saw it (Dev A, PLAN.md "Complaints with two issues").
+
+**What runs:** a separate small LLM call (DeepSeek, prompt `issues-v2`) lists every issue with the customer's exact words. It runs alongside extraction. Code keeps an issue only if:
+- its category differs from the decision's
+- it isn't a natural overlap (scam ↔ failed transfer / unauthorised)
+- its quote really appears in the complaint
+
+A kept issue holds the case for an officer (`second_issue`). No scored field changes, and the reply gets one extra sentence. Any failure counts as "no second issue".
+
+**Why not Dev A's phrase list:** on 6 ordinary single-issue sentences in customer style, it wrongly flagged 5 ("kena caj 2 kali", "kad ATM", "used my card twice", a transfer "kat atm", "the fee was taken twice"). It flagged 0 on our data only because our generator writes cleanly.
+
+**Evaluation set** (`backend/eval/issues/`, built first and then frozen): 28 two-issue and 28 tricky single-issue rewrites, plus Dev A's 6 (rebuilt from his PLAN.md phrases; the scam + unauthorised one is a natural overlap and must not be flagged). It's split into a dev half (tuning allowed) and a final half (run once). The prompt's examples are written fresh, and a test proves they share no text or quote with the set.
+
+| Set | Second issues caught | False flags |
+|---|---|---|
+| Dev half (31; used for tuning) | 17/17 | 0/14 |
+| **Final half (31; untouched until the gate)** | **16/16 (100%)** | **0/15** |
+| Training (1,750; one issue each) | – | **0** |
+| Messy (42) | – | **0** |
+| Test (750) | – | **0**, so `predictions.csv` is unchanged |
+
+**End to end** (gate, real models):
+- **Training score 99.94, unchanged**; routes identical; 0 `second_issue` holds.
+- `api_check` 100.0, 9/9 probes, 4.3 s per complaint. 20 at once: 4.2 s median, 8.2 s slowest.
+- Dev A's 6 posted to the API: **5 held** (`awaiting_approval`, `sent: false`), each with its quote. The scam + unauthorised one is not flagged and stays FRAUD_TEAM. The replies add "We have also noted your concern about … and passed it to the team concerned" (EN/MS), and pass the self-check.
+
+**Decisions and why:**
+- **`LLM_ISSUES_REASONING=none`.** On the dev half, default (high) reasoning caught 15/17 with 3 failed calls, at 9.0 s p50 and 22.3 s p95. Both misses were empty answers: the reasoning used up the budget. With none it caught 17/17, at 2.8 s p50, for half the cost. Extraction keeps its own reasoning setting.
+- **Prompt v2** adds "a second issue is often one short sentence at the end" and one fresh example. Tuned on the dev half only; that fixed the one real miss.
+- **Token budget 1,000.** On all 2,542 extra complaints, 21 calls (0.8%) failed with an empty answer. DeepSeek spent 500–950 hidden tokens before a short answer, so the 300 budget ran out. With 1,000, all 21 succeed, and the dev/final halves were re-checked (unchanged: 17/17, 16/16, 0 false flags).
+- **The gate** (agreed with Dev A): final half ≥ 80% caught and ≤ 1 false flag; training ≤ 1%; messy ≤ 1. All pass.
+
+**Cost:** about RM0.0005 per complaint (RM0.97 for 1,750). Kill switch: `LLM_ISSUES=off`.
+
 ## How to reproduce
 
 Needs `OPENROUTER_API_KEY` in `.env`. LLM responses are cached in `backend/.cache/llm_cache.db`, so a rerun with the same prompt and model costs nothing.

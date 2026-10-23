@@ -875,13 +875,15 @@ frontend/
 | Scoring edge cases | Run scorer after every change, analyze wrongs |
 | Frontend not ready | Pipeline + batch runner + API still deliver leaderboard and Checkpoint 2 |
 | Secrets leak (public repo) | Keys only in env vars; `.env` gitignored |
-| A complaint raises two issues; the second is dropped | Code-only second-issue check holds the case for an officer. See [Complaints with two issues](#complaints-with-two-issues) |
+| A complaint raises two issues; the second is dropped | LLM issues check plus code quote verification holds the case for an officer (`b-second-issue`). See [Complaints with two issues](#complaints-with-two-issues) |
 
 ---
 
 ## Complaints with two issues
 
 Proposed by Dev A on 2026-10-23; it needs Dev B's agreement before any code is written.
+
+> **Status (agreed by Dev A and Dev B, 2026-10-23):** the problem below stands. **The phrase-list fix was replaced** by an LLM issues check that runs alongside extraction, with code verifying every quote (OpenSpec change `b-second-issue`, `backend/agent/issues.py`). The reason: on 6 ordinary single-issue sentences in real customer style, the phrase list wrongly flagged 5. "kena caj 2 kali", "kad ATM" and "used my card twice" all use another category's words without raising that problem; our data didn't show this because it's written cleanly. The hold, the hold reason `second_issue`, the natural-overlap rule and the demo answer are kept from this plan. Results are in [EXTRACTOR_RESULTS.md](EXTRACTOR_RESULTS.md#second-issue-check-b-second-issue).
 
 ### The problem
 

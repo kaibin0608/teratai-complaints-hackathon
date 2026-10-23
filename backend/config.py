@@ -22,11 +22,14 @@ TEAM_NAME = os.getenv("TEAM_NAME", "teratai-team")
 # Each LLM step is "provider:model". Providers: openrouter, openai_compatible, fake (offline keywords/template).
 LLM_EXTRACT = os.getenv("LLM_EXTRACT", "fake:keywords")
 LLM_DRAFT = os.getenv("LLM_DRAFT", "fake:template")
+# The second-issue check (backend/agent/issues.py): empty = follow LLM_EXTRACT (resolved at call time); "off" disables.
+LLM_ISSUES = os.getenv("LLM_ISSUES", "").strip()
 LLM_EXTRACT_JSON_MODE = os.getenv("LLM_EXTRACT_JSON_MODE", "json_schema")  # json_schema | json_object | prompt
 LLM_DRAFT_JSON_MODE = os.getenv("LLM_DRAFT_JSON_MODE", "prompt")
 # Reasoning effort per step (OpenRouter reasoning.effort: none | low | medium | high ...); empty = the model's default.
 LLM_EXTRACT_REASONING = os.getenv("LLM_EXTRACT_REASONING", "")
 LLM_DRAFT_REASONING = os.getenv("LLM_DRAFT_REASONING", "")
+LLM_ISSUES_REASONING = os.getenv("LLM_ISSUES_REASONING", "none")  # high reasoning was 3x slower and ran out of tokens
 LLM_MAX_CONCURRENCY = int(os.getenv("LLM_MAX_CONCURRENCY", "8"))
 LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "30"))
 LLM_CACHE_PATH = ROOT / os.getenv("LLM_CACHE_PATH", "backend/.cache/llm_cache.db")  # relative to repo root

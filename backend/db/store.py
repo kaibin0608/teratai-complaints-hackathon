@@ -73,7 +73,8 @@ def engine_result(run: AgentRun) -> EngineResult:
 
 
 def run_cost(run: AgentRun) -> Decimal:
-    return run.extract_usage.cost_myr + sum((u.cost_myr for u in run.draft_usage), Decimal("0"))
+    issues = run.issues_usage.cost_myr if run.issues_usage else Decimal("0")
+    return run.extract_usage.cost_myr + issues + sum((u.cost_myr for u in run.draft_usage), Decimal("0"))
 
 
 class CaseStore:

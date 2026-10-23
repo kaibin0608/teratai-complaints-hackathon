@@ -29,6 +29,7 @@ HOLD_TEXT = {
     "self_check_failed": "Self-check failed",
     "unknown_auth_method": "Unknown authentication method",
     "llm_error": "Language model unavailable",
+    "second_issue": "Complaint raises a second issue",
 }
 FILTERS = {  # list filter -> allowed values
     "queue": QUEUES,
@@ -318,8 +319,8 @@ def case_detail(conn: sqlite3.Connection, complaint_id: str, scope: str | None =
         },
         "complaint": {"customer_id": case["customer_id"], "received_at": iso(case["received_at"]),
                       "channel": case["channel"], "subject": case["subject"], "text": case["text"]},
-        "customer": None, "clues": None, "match": None, "decision": None, "evidence": None, "reply": None,
-        "usage": None,
+        "customer": None, "clues": None, "match": None, "decision": None, "evidence": None, "other_issues": None,
+        "reply": None, "usage": None,
     }
     if d is not None:
         evidence = ev.model_dump(mode="json")
@@ -331,11 +332,13 @@ def case_detail(conn: sqlite3.Connection, complaint_id: str, scope: str | None =
             "match": run.match.model_dump(mode="json") if run.match else None,
             "decision": {**d.model_dump(mode="json"), "refund_amount_myr": f"{d.refund_amount_myr:.2f}"},
             "evidence": evidence,
+            "other_issues": [i.model_dump(mode="json") for i in run.other_issues],
             "reply": {"text": run.reply_text, "redraft_count": run.redraft_count,
                       "self_check": run.self_check.model_dump(mode="json") if run.self_check else None},
             "usage": {"cost_myr": cost(run_cost(run)), "latency_ms": latency_ms,
                       "prompt_version": run.prompt_version, "schema_version": run.schema_version,
                       "policy_version": run.policy_version, "extract": _usage(run.extract_usage),
+                      "issues": _usage(run.issues_usage) if run.issues_usage else None,
                       "draft": [_usage(u) for u in run.draft_usage]},
         })
 

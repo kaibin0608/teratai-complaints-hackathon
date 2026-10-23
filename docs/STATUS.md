@@ -33,6 +33,7 @@ Last updated: 2026-10-23, after `a-fee-type-fix` (branch `feat/a-fee-type-fix`).
 - [ ] **C2 · API reachable from the organisers' laptop** (venue Wi-Fi or a tunnel), for Checkpoint 2 on Day 2 at 12:00. *(B)*
 - [ ] C3 · Reply-language tweak for formal Malay (about 25 training misses, about 0.07 points). Optional. *(B)*
 - [x] C4 · `categories/fee.py` fee-type match fixed: changed `any()` to `all()` for word matching, so "debit card annual fee" no longer matches "credit card annual fee". CMP-00010 now confidently matches the correct transaction. 2,334 tests pass. *(A, `feat/a-fee-type-fix`)*
+- [x] C5 · **Second-issue check** (`b-second-issue`): a complaint raising a second, different problem is held for an officer ("Complaint raises a second issue"); the reply mentions it in one sentence. LLM issues check plus code quote verification; final test half 16/16 caught, 0 false flags on 2,604 complaints; scores unchanged. Kill switch `LLM_ISSUES=off`. *(B, agreed with A)*
 
 ## Bonus platform backend (PLAN 2.2–2.4)
 
