@@ -25,9 +25,15 @@ Sign in as `officer1`, `officer2`, `fraud1` or `manager1`, password `teratai123`
 |---|---|
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Typecheck + production build |
+| `npm run preview` | Serve the built app (same `/api` proxy as dev) |
+| `npm test` / `npm run test:watch` | Unit tests for the business rules (Vitest) |
 | `npm run typecheck` / `npm run lint` | TypeScript / oxlint |
 
-`VITE_API_URL` points a built UI at another machine's backend; `BACKEND_URL` changes the dev proxy target; `VITE_DEMO_DATE` changes the demo clock date (default 2026-09-30).
+`VITE_API_URL` points a built UI at another machine's backend; `BACKEND_URL` changes the dev and preview proxy target; `VITE_DEMO_DATE` changes the demo clock date (default 2026-09-30).
+
+**On another laptop (venue Wi-Fi):** run the backend with `--host 0.0.0.0` (`backend.bat` does), then either `npm run dev -- --host` or `npm run build && npm run preview -- --host`, and open `http://<your-ip>:5173` (dev) or `:4173` (preview). With `AUTH_REQUIRED=true` in the backend's `.env` the UI works unchanged (verified): reads without a token get 401, which signs the user out.
+
+**Tests** cover the rules where a mistake would be costly: approval limits and escalation (including RM2,000.00 vs RM2,000.01, sensitive, locked Approve), who may act on which case, the reply highlighter that marks invented IDs and amounts, auto-advance, CSV and intake parsing, money and time formatting, SLA states, the 65+ age rule, and audit wording.
 
 ---
 
@@ -69,7 +75,12 @@ frontend/src/
 | Foundation | Formatting, demo clock, API client, login state, routes + role guards, design tokens + fonts, layout (borderless sidebar + bordered panel), Login page, shared badges, dev UI kit (`/dev/ui`) |
 | Alignment | Types mirror UI_API.md; real backend instead of a mock; error shapes; queue and workflow badges |
 | Case page, read side | Header, SLA timers, banners; complaint, customer, **evidence per category**, match candidates, decision with calculation, **reply with invented IDs and amounts marked**, agent vs people, cost and speed, timeline with simulated outbound. Polls every 2 s only while the agent is working |
-| **B1. Cases page** | Queue tabs with live counts per role, polled every 4 s so new complaints appear on their own; sort, paging, tab in the URL |
+| **B1. Cases page** | Queue tabs with live counts per role, polled every 4 s so new complaints appear on their own; sort, paging. **Search and filters** (case / customer / subject, category, priority, hold, workflow with counts, assigned to me or unassigned, sensitive, and for the manager "changed by people"); tab, sort and filters all live in the URL. Rows show who closed a case, the holding reply being sent, manual sensitive flags, people overriding the agent, and agent errors |
+| **Auto-advance** | After approve, reject, send back, escalate, a second-tier decision or recording an outcome, the next case that needs *you* opens (officer: untouched approval cases; analyst: unacknowledged fraud cases; manager: the next escalation), with a dismissible note; the queue if nothing is waiting. Edit, flag, log, acknowledge and reassign keep you on the case |
+| **Case page, full** | Adds **what the agent understood** (the clues), the **fraud outcome**, the **agent run history** with a banner when the page shows a re-run (the first run is the scored one), what the manager is being asked to approve (the escalation **proposal**), the person's reason, versions, reversals and related transactions |
+| **Manager console** | Escalations first, then 16 tiles in four groups (right now, the agent, people, refunds) and a chart for every breakdown `/api/metrics` returns (per-day trend, category, outcome, route, priority, holds, workflow, channel, language) plus models and throughput. Single-hue bars with the value at the tip, hover details and a Chart / Table switch on each |
+| **Audit log** | Adds From / To dates (`since` / `until`) |
+| **Quality** | Responsive layout (icon rail below 1280 px), 77 unit tests, production preview proxy, `AUTH_REQUIRED=true` verified |
 | **B3. Actions** | One decision bar and dialog for **every** platform action, with the rules in `lib/actions.ts` (headroom, escalate instead of approve, locked approve on a flagged reply, assigned-elsewhere and re-running notices). Covers the officer's and the fraud analyst's whole flow and the manager's second-tier approve / reject |
 
 ---
@@ -89,11 +100,24 @@ Every check in the human-gate checklist ([USERFLOW.md §4](USERFLOW.md#4-flow-b-
 | **U3 Fraud Investigation Workbench** | Done: fraud queue; auth method in large type; Acknowledge → Log investigation / recall → Record outcome; Escalate with a proposed outcome |
 | **U4 Manager Console** | Done: `/manager` has nine metric tiles (`GET /api/metrics?as_of=<demo clock>`, polled every 10 s) and the escalation queue (`workflow=escalated`, both teams, with who escalated and why; second-tier approve / reject on the case page). `/cases` shows every queue. `/audit` is the audit log with filters from the log's own facets, "people only", load more and **CSV export**. **Reassign** is a manager button on every open case (people from `GET /api/users`) |
 
-### D. Extras (only if time is left)
+### D. Extras: done
 
-- **Charts** (X2): `cases.by_category`, `by_priority`, `by_route`, `holds.by_reason`, `trends.received_by_day`
-- **Intake form** (U5, optional): posts to `POST /complaints` for rehearsing; the judges post directly
+- **Charts** (X2): the manager console (see above).
+- **Intake** (U5): `/intake` posts to `POST /complaints` (the contract route, proxied in dev and preview) from a form or pasted CSV rows in the live-round format, and shows each complaint's result; the manager also sees it tracked live to its queue. The judges post to the API directly.
 - Not planned (PLAN.md): WebSocket push, chatbot panel, notifications. Polling is enough.
+
+---
+
+## What the UI uses from the backend
+
+Every route in `docs/UI_API.md` is used: `POST /api/auth/login`, `GET /api/auth/me`, `GET /api/cases`, `GET /api/cases/{id}`, all 12 platform actions, `GET /api/metrics`, `GET /api/audit`, `GET /api/users`, and the organisers' `POST /complaints`. The contract routes `POST /cases/{id}/actions` and `/acknowledge` are for the judges and `api_check.py`; the UI uses the platform actions, which add limits and roles. Every section of the case detail is shown, and every metric from `/api/metrics` is a tile, a chart or in the "Agent activity" card. Left out on purpose: the customer's email address (not needed to decide), the reply's `found_*` lists (the highlighter uses `allowed_*`, which is stricter), and the outbound `status` (always sent in this simulation).
+
+## Open requests for Dev B (not blockers)
+
+1. **Related transactions on the same account** for the fraud workbench (PLAN §3.4). `evidence.related_txns` only carries a duplicate's earlier charge, so the UI shows what it is given.
+2. **A customer search** (`GET /api/customers?q=`) for autocomplete on the Intake form; today the customer ID is typed.
+3. **A retry for failed cases** (STATUS O2): the UI shows an agent error but has nothing to call.
+4. **An outbound-messages list** (`GET /api/outbound`) if a cross-case "nothing was sent without a human" view is wanted; today each case's timeline shows its own simulated messages.
 
 ---
 

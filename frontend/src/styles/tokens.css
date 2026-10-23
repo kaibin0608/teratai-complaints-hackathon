@@ -153,6 +153,8 @@
   /* App frame: p-frame / gap-frame (gap around the content panel), w-sidebar, h-header (page title bar) */
   --spacing-frame: 1rem;
   --spacing-sidebar: 15rem;
+  /* Below the xl breakpoint (1280 px) the sidebar collapses to an icon rail */
+  --spacing-sidebar-rail: 4.25rem;
   --spacing-header: 3.5rem;
 
   /* Radius: rounded-control, rounded-card, rounded-badge */

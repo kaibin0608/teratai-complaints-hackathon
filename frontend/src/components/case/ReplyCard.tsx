@@ -1,7 +1,7 @@
 import { Badge } from '@/components/shared/Badge'
 import { Card } from '@/components/shared/Card'
 import { SelfCheckBadge } from '@/components/shared/SelfCheckBadge'
-import { formatIsoTime } from '@/lib/format'
+import { formatIsoTime, formatMoney } from '@/lib/format'
 import { highlightReply } from '@/lib/replyCheck'
 import type { CaseDetail } from '@/lib/types'
 
@@ -23,7 +23,7 @@ export function ReplyCard({ detail }: { detail: CaseDetail }) {
         {reply.redraft_count > 0
           ? `Redrafted ${reply.redraft_count} time${reply.redraft_count === 1 ? '' : 's'} after the self-check.`
           : 'First draft.'}{' '}
-        The reply may only mention these IDs and amounts: {[...allowedIds, ...allowedAmounts].join(', ') || 'none'}.
+        The reply may only mention: {allowedFacts(allowedIds, allowedAmounts)}.
       </p>
 
       {draft && (
@@ -41,6 +41,12 @@ export function ReplyCard({ detail }: { detail: CaseDetail }) {
       )}
     </Card>
   )
+}
+
+/** "TXN-0151125 · RM1,500.00 · RM0.00": each fact once, amounts formatted. */
+function allowedFacts(ids: readonly string[], amounts: readonly string[]): string {
+  const facts = [...new Set(ids), ...new Set(amounts.map(formatMoney))]
+  return facts.length > 0 ? facts.join(' · ') : 'nothing'
 }
 
 function ReplyText({ text, allowedIds, allowedAmounts }: { text: string; allowedIds: string[]; allowedAmounts: string[] }) {

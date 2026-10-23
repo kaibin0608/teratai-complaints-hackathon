@@ -18,18 +18,23 @@ interface Filters {
   actor: string
   action: string
   caseId: string
+  /** "YYYY-MM-DD"; the backend reads a bare `until` as the end of that day. */
+  since: string
+  until: string
   peopleOnly: boolean
 }
 
 /** The append-only log: who did what, when, why. Filters come from the log's own `facets`. */
 export function AuditLogView() {
-  const [filters, setFilters] = useState<Filters>({ actor: ANY, action: ANY, caseId: '', peopleOnly: false })
+  const [filters, setFilters] = useState<Filters>({ actor: ANY, action: ANY, caseId: '', since: '', until: '', peopleOnly: false })
   const [limit, setLimit] = useState(PAGE_SIZE)
 
   const query: AuditQuery = {
     actor: filters.actor || undefined,
     action: filters.action || undefined,
     complaint_id: filters.caseId.trim() || undefined,
+    since: filters.since || undefined,
+    until: filters.until || undefined,
     people_only: filters.peopleOnly || undefined,
     limit,
   }
@@ -62,6 +67,12 @@ export function AuditLogView() {
         </div>
         <div className="w-44">
           <TextField label="Case" placeholder="CMP-00244" value={filters.caseId} onChange={(e) => change({ caseId: e.target.value })} />
+        </div>
+        <div className="w-40">
+          <TextField label="From" type="date" required={false} value={filters.since} max={filters.until || undefined} onChange={(e) => change({ since: e.target.value })} />
+        </div>
+        <div className="w-40">
+          <TextField label="To" type="date" required={false} value={filters.until} min={filters.since || undefined} onChange={(e) => change({ until: e.target.value })} />
         </div>
         <label className="flex h-9 items-center gap-2 text-sm text-body">
           <input type="checkbox" checked={filters.peopleOnly} onChange={(e) => change({ peopleOnly: e.target.checked })} className="size-4 accent-brand-600" />

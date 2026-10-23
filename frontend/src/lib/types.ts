@@ -519,6 +519,25 @@ export interface ActionBodies {
 export type CaseAction = keyof ActionBodies
 
 /* ------------------------------------------------------------------ */
+/* Intake: POST /complaints (docs/api.md, the organisers' contract)    */
+/* ------------------------------------------------------------------ */
+
+/** The six fields of a complaints.csv row. `received_at` is "2026-09-30 10:15" (Malaysia time). */
+export interface ComplaintInput {
+  complaint_id: string
+  customer_id: string
+  received_at: string
+  channel: string
+  subject: string
+  text: string
+}
+
+export interface IntakeAck {
+  complaint_id: string
+  status: CaseStatus
+}
+
+/* ------------------------------------------------------------------ */
 /* Errors                                                              */
 /* ------------------------------------------------------------------ */
 

@@ -8,5 +8,6 @@ const POLL_MS = 4000
 export function useCaseList(query: CaseListQuery) {
   return useApi<CaseList>(`cases:${JSON.stringify(query)}`, (signal) => casesApi.list(query, signal), {
     pollMs: POLL_MS,
+    keepPrevious: true,
   })
 }

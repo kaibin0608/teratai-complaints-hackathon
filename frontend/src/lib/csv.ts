@@ -1,3 +1,37 @@
+/** CSV text → rows (RFC 4180: quoted cells may hold commas, doubled quotes and line breaks). Blank lines are skipped. */
+export function parseCsv(text: string): string[][] {
+  const rows: string[][] = []
+  let row: string[] = []
+  let cell = ''
+  let quoted = false
+
+  const endCell = () => {
+    row.push(cell)
+    cell = ''
+  }
+  const endRow = () => {
+    endCell()
+    if (row.some((value) => value.trim() !== '')) rows.push(row)
+    row = []
+  }
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    if (quoted) {
+      if (char === '"' && text[i + 1] === '"') {
+        cell += '"'
+        i++
+      } else if (char === '"') quoted = false
+      else cell += char
+    } else if (char === '"') quoted = true
+    else if (char === ',') endCell()
+    else if (char === '\n') endRow()
+    else if (char !== '\r') cell += char
+  }
+  endRow()
+  return rows
+}
+
 /** Rows → CSV text (every cell quoted, so commas and line breaks in replies are safe). */
 export function toCsv(rows: readonly (readonly (string | number | null)[])[]): string {
   return rows.map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n')

@@ -5,6 +5,7 @@ import { Button } from '@/components/shared/Button'
 import { StatusMessage } from '@/components/shared/StatusMessage'
 import { paths } from '@/lib/paths'
 
+/** "/" sends each role to its own home queue. */
 const backLink = (
   <Link to={paths.root} className="text-sm font-medium text-link hover:text-link-hover">
     Back to my queue

@@ -9,12 +9,15 @@ import { defineConfig } from 'vite'
  */
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://127.0.0.1:8000'
 
+// /complaints is the organisers' intake route (docs/api.md). /cases is NOT proxied: it is also a page here.
+const proxy = { '/api': BACKEND_URL, '/complaints': BACKEND_URL }
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
-  server: {
-    proxy: { '/api': BACKEND_URL },
-  },
+  // `npm run dev` and `npm run preview` (the built app) reach the backend the same way.
+  server: { proxy },
+  preview: { proxy },
 })

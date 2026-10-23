@@ -1,6 +1,7 @@
 import { CircleAlert } from 'lucide-react'
 import { useActionState } from 'react'
 import { ApiError } from '@/api/client'
+import logo from '@/assets/teratai-logo.png'
 import { Button } from '@/components/shared/Button'
 import { TextField } from '@/components/shared/TextField'
 import { useAuth } from '@/hooks/useAuth'
@@ -30,9 +31,10 @@ export function Login() {
   return (
     <main className="grid min-h-dvh place-items-center bg-page p-page">
       <div className="w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-semibold">Teratai Ops</h1>
-          <p className="mt-1 text-sm text-secondary">Complaints operations</p>
+        <div className="mb-6 flex flex-col items-center text-center">
+          <img src={logo} alt="" className="mb-3 h-14 w-auto mix-blend-multiply" />
+          <h1 className="text-2xl font-semibold">Teratai Bank</h1>
+          <p className="mt-1 text-sm text-secondary">Complaints Ops: sign in to continue</p>
         </div>
 
         <form action={signIn} className="flex flex-col gap-4 rounded-card border border-default bg-card p-card shadow-card">
@@ -60,8 +62,10 @@ export function Login() {
         </form>
 
         {import.meta.env.DEV && (
-          <p className="mt-4 text-center text-xs text-secondary">
-            Demo users: officer1 · officer2 · fraud1 · manager1 · password teratai123
+          <p className="mt-4 text-center text-xs leading-relaxed text-secondary">
+            Demo users: officer1 · officer2 · fraud1 · manager1
+            <br />
+            Password: teratai123
           </p>
         )}
       </div>

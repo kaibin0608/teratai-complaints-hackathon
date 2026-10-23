@@ -1,9 +1,16 @@
-import { CircleArrowUp, CirclePause, HandHeart, LoaderCircle, TriangleAlert } from 'lucide-react'
+import { CircleArrowUp, CirclePause, HandHeart, LoaderCircle, Repeat2, TriangleAlert } from 'lucide-react'
 import { Banner } from '@/components/shared/Banner'
 import { awaitsFirstTier } from '@/lib/case'
-import { formatIsoTime } from '@/lib/format'
-import { holdReasonHelp, holdReasonLabel, routeLabel } from '@/lib/labels'
-import type { CaseDetail } from '@/lib/types'
+import { formatIsoTime, formatMoney } from '@/lib/format'
+import { fraudOutcomeLabel, holdReasonHelp, holdReasonLabel, outcomeLabel, routeLabel } from '@/lib/labels'
+import type { CaseDetail, Escalation } from '@/lib/types'
+
+/** What the manager is being asked to approve. */
+function describeProposal(proposal: Escalation['proposal']): string {
+  if (proposal.action === 'record_outcome') return `record the fraud outcome “${fraudOutcomeLabel[proposal.outcome]}”.`
+  const reply = proposal.edited ? 'the officer’s edited reply' : 'the agent’s reply'
+  return `send ${reply} and any refund (self-check ${proposal.self_check}).`
+}
 
 /** Why this case needs extra care, most urgent first. Renders nothing for a routine case. */
 export function CaseBanners({ detail }: { detail: CaseDetail }) {
@@ -21,6 +28,13 @@ export function CaseBanners({ detail }: { detail: CaseDetail }) {
         {c.workflow === 'reprocessing' ? 'Re-running after a send back. ' : ''}This page updates when it finishes.
       </Banner>
     ),
+    detail.autonomous && c.current_run_id !== c.autonomous_run_id && (
+      <Banner key="rerun" tone="info" icon={Repeat2} title="Showing the agent's re-run after a send back">
+        Its first decision (the one that is scored) was {outcomeLabel[detail.autonomous.outcome]}
+        {detail.autonomous.outcome === 'REFUND' && ` ${formatMoney(detail.autonomous.refund_amount_myr)}`}
+        {` → ${routeLabel[detail.autonomous.route]}`}. The re-run always waits for a person.
+      </Banner>
+    ),
     c.workflow === 'escalated' && c.escalation && (
       <Banner
         key="escalated"
@@ -29,6 +43,9 @@ export function CaseBanners({ detail }: { detail: CaseDetail }) {
         title={`Escalated to the manager by ${c.escalation.by} · ${formatIsoTime(c.escalation.at)}`}
       >
         {c.escalation.reason}
+        <br />
+        <span className="font-medium">Proposal: </span>
+        {describeProposal(c.escalation.proposal)}
       </Banner>
     ),
     decision?.hold_reason && (

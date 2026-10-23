@@ -1,6 +1,5 @@
 import { Card } from '@/components/shared/Card'
 import { DetailList } from '@/components/shared/DetailList'
-import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { formatMoney } from '@/lib/format'
 import { categoryLabel, outcomeLabel, routeLabel } from '@/lib/labels'
 import type { CaseDetail } from '@/lib/types'
@@ -20,7 +19,7 @@ export function DecisionCard({ detail }: { detail: CaseDetail }) {
       : 'the language of the complaint'
 
   return (
-    <Card title="Decision" aside={<PriorityBadge priority={decision.priority} />}>
+    <Card title="Decision">
       <p className="font-display text-2xl font-semibold text-primary tabular-nums">
         {outcomeLabel[decision.outcome]}
         {decision.outcome === 'REFUND' && <span className="ml-2">{formatMoney(decision.refund_amount_myr)}</span>}

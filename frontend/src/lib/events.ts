@@ -1,4 +1,8 @@
+import { holdReasonLabel, routeLabel } from './labels'
 import type { AuditEvent } from './types'
+
+const labelled = (value: unknown, labels: Record<string, string>): string | null =>
+  typeof value === 'string' && value ? (labels[value] ?? value) : null
 
 /** Audit actions (UI_API.md, platform actions) in plain words. Unknown actions fall back to the name itself. */
 const ACTION_LABEL: Record<string, string> = {
@@ -21,6 +25,9 @@ const ACTION_LABEL: Record<string, string> = {
   record_outcome: 'Outcome recorded',
 }
 
+/** An audit action in plain words; unknown actions are made readable. */
+export const actionLabel = (action: string): string => ACTION_LABEL[action] ?? humanise(action)
+
 const humanise = (action: string) => {
   const words = action.replace(/_/g, ' ')
   return words.charAt(0).toUpperCase() + words.slice(1)
@@ -40,9 +47,11 @@ const text = (value: unknown): string | null => (typeof value === 'string' && va
 export function describeEvent(event: AuditEvent): EventSummary {
   const detail = event.detail ?? {}
   const problems = Array.isArray(detail.problems) ? detail.problems.filter((p): p is string => typeof p === 'string') : []
-  const agentRoute = event.action === 'agent_run' ? [text(detail.route), text(detail.hold_reason)].filter(Boolean).join(' · ') : null
+  const route = labelled(detail.route, routeLabel)
+  const hold = labelled(detail.hold_reason, holdReasonLabel)
+  const agentRoute = event.action === 'agent_run' && route ? `Routed to ${route}${hold ? ` · held: ${hold}` : ''}` : null
   return {
-    title: ACTION_LABEL[event.action] ?? humanise(event.action),
+    title: actionLabel(event.action),
     note: text(detail.reason) ?? text(detail.note) ?? text(detail.error) ?? (agentRoute || null),
     problems,
   }

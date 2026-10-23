@@ -20,6 +20,7 @@ export function UsageCard({ detail }: { detail: CaseDetail }) {
           { label: 'Time', value: <span className="tabular-nums">{formatMs(usage.latency_ms)}</span> },
           { label: 'Agent runs', value: runs.length > 1 ? `${runs.length} (one after a send back)` : '1' },
           { label: 'Policy', value: usage.policy_version },
+          { label: 'Prompt / schema', value: `${usage.prompt_version} · ${usage.schema_version}` },
         ]}
       />
       <ul className="mt-3 divide-y divide-neutral-100 rounded-control border border-subtle text-sm">

@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import { cx } from '@/lib/cx'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-outline'
 
 /** Colour System §4. Use one primary per view; everything else secondary or ghost. */
 const variantClass: Record<Variant, string> = {
@@ -12,6 +12,9 @@ const variantClass: Record<Variant, string> = {
   ghost: 'text-link hover:bg-brand-50 active:bg-brand-100 disabled:bg-transparent disabled:text-disabled',
   danger:
     'bg-error-600 text-inverse hover:bg-error-700 active:bg-error-800 disabled:bg-neutral-100 disabled:text-disabled',
+  /** A destructive choice that must not compete with the one primary action. */
+  'danger-outline':
+    'border border-error-200 bg-card text-error-700 hover:bg-error-50 active:bg-error-100 disabled:border-default disabled:bg-card disabled:text-disabled',
 }
 
 interface ButtonProps extends ComponentProps<'button'> {

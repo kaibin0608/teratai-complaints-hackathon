@@ -2,10 +2,11 @@ import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { cx } from '@/lib/cx'
 
-type BannerTone = 'info' | 'warning' | 'error' | 'aubergine'
+type BannerTone = 'success' | 'info' | 'warning' | 'error' | 'aubergine'
 
 /** Colour System §5: banner = status 50 bg, 200 border, 800 text, 500 icon. */
 const toneClass: Record<BannerTone, { box: string; icon: string }> = {
+  success: { box: 'border-success-200 bg-success-50 text-success-800', icon: 'text-success-500' },
   info: { box: 'border-info-200 bg-info-50 text-info-800', icon: 'text-info-500' },
   warning: { box: 'border-warning-200 bg-warning-50 text-warning-800', icon: 'text-warning-500' },
   error: { box: 'border-error-200 bg-error-50 text-error-800', icon: 'text-error-500' },

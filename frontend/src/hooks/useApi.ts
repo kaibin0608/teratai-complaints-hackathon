@@ -6,6 +6,8 @@ export type ApiState<T> =
   | { status: 'success'; data: T }
 
 interface UseApiOptions<T> {
+  /** On a new key, keep showing the previous data until the new data arrives (lists with filters), not "loading". */
+  keepPrevious?: boolean
   /** Refetch every `pollMs` (e.g. queues). Refreshes keep showing the current data. */
   pollMs?: number
   /** With `pollMs`: poll only while this is true for the loaded data (e.g. while the agent is working); never before data loads. */
@@ -20,7 +22,7 @@ interface UseApiOptions<T> {
 export function useApi<T>(
   key: string,
   fetcher: (signal: AbortSignal) => Promise<T>,
-  { pollMs, pollWhile }: UseApiOptions<T> = {},
+  { keepPrevious = false, pollMs, pollWhile }: UseApiOptions<T> = {},
 ): ApiState<T> & { reload: () => void } {
   const [version, setVersion] = useState(0)
   const [settled, setSettled] = useState<{ key: string; state: ApiState<T> } | null>(null)
@@ -40,7 +42,10 @@ export function useApi<T>(
     return () => controller.abort()
   }, [key, version])
 
-  const state: ApiState<T> = settled?.key === key ? settled.state : { status: 'loading' }
+  const state: ApiState<T> =
+    settled?.key === key || (keepPrevious && settled?.state.status === 'success')
+      ? settled!.state
+      : { status: 'loading' }
   const polling = pollMs !== undefined && (state.status === 'success' ? !pollWhile || pollWhile(state.data) : !pollWhile)
 
   useEffect(() => {

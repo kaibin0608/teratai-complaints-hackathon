@@ -8,7 +8,9 @@ import { Dialog } from '@/components/shared/Dialog'
 import { SelectField } from '@/components/shared/SelectField'
 import { TextArea } from '@/components/shared/TextArea'
 import { TextField } from '@/components/shared/TextField'
+import { useAdvance } from '@/hooks/useAdvance'
 import type { ActionKey } from '@/lib/actions'
+import { ADVANCING } from '@/lib/advance'
 import type { ActionBodies, CaseDetail } from '@/lib/types'
 import { ACTIONS, type FieldSpec } from './actionConfig'
 import { UserSelect } from './UserSelect'
@@ -46,6 +48,7 @@ interface ActionFormProps {
 
 function ActionForm({ action, detail, onClose, onChanged }: ActionFormProps) {
   const spec = ACTIONS[action]
+  const advance = useAdvance()
   const [state, setState] = useState<FormState>({ status: 'idle' })
   const pending = state.status === 'pending'
   const description = spec.description(detail)
@@ -64,6 +67,12 @@ function ActionForm({ action, detail, onClose, onChanged }: ActionFormProps) {
     try {
       // The field specs mirror ActionBodies; the backend validates the rest.
       const next = await casesApi.act(detail.case.complaint_id, action, body as ActionBodies[ActionKey])
+      if (ADVANCING.has(action)) {
+        // Finished with this case: close the dialog first (it would otherwise stay open on the next case), then move on.
+        onClose()
+        await advance(action, detail.case.complaint_id)
+        return
+      }
       onChanged()
       if (action === 'edit-reply') setState({ status: 'saved', draft: next.draft_reply })
       else onClose()

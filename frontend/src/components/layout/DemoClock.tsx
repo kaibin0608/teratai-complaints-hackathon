@@ -6,7 +6,7 @@ import { formatIsoTime } from '@/lib/format'
 export function DemoClock() {
   const now = useDemoNow()
   return (
-    <div className="flex items-center gap-2 px-2 text-xs whitespace-nowrap text-secondary">
+    <div className="hidden items-center gap-2 px-2 text-xs whitespace-nowrap text-secondary xl:flex">
       <Clock size={14} aria-hidden className="shrink-0" />
       <span>Demo clock</span>
       <time dateTime={now} className="ml-auto tabular-nums text-body">

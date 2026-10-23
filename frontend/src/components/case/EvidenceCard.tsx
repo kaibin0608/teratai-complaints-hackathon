@@ -15,7 +15,13 @@ export function EvidenceCard({ detail }: { detail: CaseDetail }) {
   let body: ReactNode
   if (decision.category === 'SERVICE_QUALITY') body = <Note>No transaction involved: a service complaint.</Note>
   else if (!txn) body = <Note>No transaction matched the complaint.</Note>
-  else body = <CategoryEvidence detail={detail} evidence={evidence} decision={decision} txn={txn} />
+  else
+    body = (
+      <div className="flex flex-col gap-3">
+        <CategoryEvidence detail={detail} evidence={evidence} decision={decision} txn={txn} />
+        {decision.category !== 'DUPLICATE_CHARGE' && evidence.related_txns.length > 0 && <RelatedTransactions rows={evidence.related_txns} />}
+      </div>
+    )
 
   return (
     <Card title="Evidence" aside={txn && <span className="text-xs text-secondary tabular-nums">{txn.txn_id}</span>}>
@@ -61,7 +67,13 @@ function DuplicateEvidence({ evidence, decision, txn }: VariantProps) {
         </Panel>
       </div>
       {earlier && <p className="text-sm text-body">{formatGap(mytToMs(txn.time) - mytToMs(earlier.time))} apart.</p>}
-      {decision.rule_id === 'DUP.ALREADY_REVERSED' && <p className="text-sm text-warning-800">One of the charges was already reversed.</p>}
+      {evidence.reversal ? (
+        <p className="text-sm text-warning-800">
+          Already reversed by {evidence.reversal.txn_id} on {formatIsoTime(evidence.reversal.time)}.
+        </p>
+      ) : (
+        decision.rule_id === 'DUP.ALREADY_REVERSED' && <p className="text-sm text-warning-800">One of the charges was already reversed.</p>
+      )}
     </div>
   )
 }
@@ -159,6 +171,26 @@ function FeeEvidence({ detail, evidence, txn }: VariantProps) {
         />
       )}
     </div>
+  )
+}
+
+/** Other transactions the decision used (anything beyond the matched one). */
+function RelatedTransactions({ rows }: { rows: readonly TxnRow[] }) {
+  return (
+    <Panel title="Related transactions">
+      <ul className="flex flex-col gap-2 text-sm">
+        {rows.map((row) => (
+          <li key={row.txn_id} className="flex flex-wrap items-baseline justify-between gap-x-3">
+            <span className="text-primary tabular-nums">
+              {row.txn_id} · {row.merchant_or_counterparty || row.channel}
+            </span>
+            <span className="text-xs text-secondary tabular-nums">
+              {formatIsoTime(row.time)} · {formatMoney(row.amount_myr)} · {row.status}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
   )
 }
 

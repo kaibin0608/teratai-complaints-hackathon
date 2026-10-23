@@ -1,16 +1,18 @@
-import { CircleAlert, Inbox, LoaderCircle, RotateCw } from 'lucide-react'
+import { CircleAlert, Inbox, LoaderCircle, RotateCw, SearchX } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { NoticeBanner } from '@/components/layout/NoticeBanner'
 import { Button } from '@/components/shared/Button'
 import { StatusMessage } from '@/components/shared/StatusMessage'
 import { Tabs } from '@/components/shared/Tabs'
+import { useAuth } from '@/hooks/useAuth'
 import { useCaseList } from '@/hooks/useCaseList'
 import { cx } from '@/lib/cx'
 import { queueLabel } from '@/lib/labels'
 import type { CaseList, Queue } from '@/lib/types'
 import { CaseTable } from './CaseTable'
-
-type Sort = 'priority' | 'recent'
+import { QueueFilters } from './QueueFilters'
+import { activeFilters, readParams, toQuery, withParam, type QueueParams, type Sort } from './queueParams'
 
 const PAGE_SIZE = 50
 const SORTS: readonly { value: Sort; label: string }[] = [
@@ -19,46 +21,43 @@ const SORTS: readonly { value: Sort; label: string }[] = [
 ]
 
 /**
- * Queue tabs with live counts and a polled case table. The tab and sort live in the URL
- * (`?queue=approved&sort=recent`), so refresh, back and shared links keep them.
+ * Queue tabs with live counts, search and filters, and a polled case table. Everything the user chose lives in the
+ * URL (`?queue=approved&category=FEE_DISPUTE&q=aisyah`), so refresh, back and shared links keep it.
  */
 export function CaseQueue({ tabs }: { tabs: readonly Queue[] }) {
-  const [params, setParams] = useSearchParams()
-  const requested = params.get('queue') as Queue | null
-  const queue = requested && tabs.includes(requested) ? requested : tabs[0]!
-  const sort: Sort = params.get('sort') === 'recent' ? 'recent' : 'priority'
+  const auth = useAuth()
+  const [urlParams, setUrlParams] = useSearchParams()
+  const params = readParams(urlParams, tabs)
+  const [paging, setPaging] = useState({ signature: '', limit: PAGE_SIZE })
 
-  const update = (next: { queue?: Queue; sort?: Sort }) =>
-    setParams((current) => {
-      const merged = new URLSearchParams(current)
-      if (next.queue) merged.set('queue', next.queue)
-      if (next.sort) merged.set('sort', next.sort)
-      return merged
-    })
+  // Paging starts again whenever the tab, sort or a filter changes.
+  const signature = JSON.stringify({ ...params, q: params.q.trim() })
+  const limit = paging.signature === signature ? paging.limit : PAGE_SIZE
+  const result = useCaseList(toQuery(params, limit))
 
-  // Remount per tab and sort so paging starts again.
-  return <QueueView key={`${queue}:${sort}`} tabs={tabs} queue={queue} sort={sort} onChange={update} />
-}
+  const change = (key: keyof QueueParams, value: string | boolean | null) =>
+    setUrlParams((current) => withParam(current, key, value), { replace: key !== 'queue' && key !== 'sort' })
+  const clear = () => setUrlParams((current) => new URLSearchParams([...current].filter(([key]) => key === 'queue' || key === 'sort')), { replace: true })
 
-interface QueueViewProps {
-  tabs: readonly Queue[]
-  queue: Queue
-  sort: Sort
-  onChange: (next: { queue?: Queue; sort?: Sort }) => void
-}
-
-function QueueView({ tabs, queue, sort, onChange }: QueueViewProps) {
-  const [limit, setLimit] = useState(PAGE_SIZE)
-  const result = useCaseList({ queue, sort, limit })
   const counts: Partial<CaseList['counts']> = result.status === 'success' ? result.data.counts : {}
+  const workflowCounts = result.status === 'success' ? result.data.workflow_counts : undefined
 
   return (
     <div className="flex flex-col gap-4">
+      <NoticeBanner />
       <Tabs
         label="Queues"
-        value={queue}
-        onChange={(value) => onChange({ queue: value })}
+        value={params.queue}
+        onChange={(value) => change('queue', value)}
         items={tabs.map((value) => ({ value, label: queueLabel[value], count: counts[value] }))}
+      />
+
+      <QueueFilters
+        params={params}
+        workflowCounts={workflowCounts}
+        showChanged={auth.status === 'signed_in' && auth.user.role === 'manager'}
+        onChange={change}
+        onClear={clear}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -67,11 +66,11 @@ function QueueView({ tabs, queue, sort, onChange }: QueueViewProps) {
             <button
               key={value}
               type="button"
-              aria-pressed={sort === value}
-              onClick={() => onChange({ sort: value })}
+              aria-pressed={params.sort === value}
+              onClick={() => change('sort', value)}
               className={cx(
                 'rounded-control px-2.5 py-1 text-xs font-medium transition-colors',
-                sort === value ? 'bg-neutral-100 text-primary' : 'text-secondary hover:text-primary',
+                params.sort === value ? 'bg-neutral-100 text-primary' : 'text-secondary hover:text-primary',
               )}
             >
               {label}
@@ -81,7 +80,12 @@ function QueueView({ tabs, queue, sort, onChange }: QueueViewProps) {
         <LiveIndicator result={result} />
       </div>
 
-      <QueueBody result={result} queue={queue} onRetry={result.reload} onMore={() => setLimit((l) => l + PAGE_SIZE)} />
+      <QueueBody
+        result={result}
+        params={params}
+        onRetry={result.reload}
+        onMore={() => setPaging({ signature, limit: limit + PAGE_SIZE })}
+      />
     </div>
   )
 }
@@ -99,12 +103,12 @@ function LiveIndicator({ result }: { result: ReturnType<typeof useCaseList> }) {
 
 interface QueueBodyProps {
   result: ReturnType<typeof useCaseList>
-  queue: Queue
+  params: QueueParams
   onRetry: () => void
   onMore: () => void
 }
 
-function QueueBody({ result, queue, onRetry, onMore }: QueueBodyProps) {
+function QueueBody({ result, params, onRetry, onMore }: QueueBodyProps) {
   if (result.status === 'loading') return <StatusMessage busy icon={LoaderCircle} title="Loading cases…" />
   if (result.status === 'error') {
     return (
@@ -124,8 +128,12 @@ function QueueBody({ result, queue, onRetry, onMore }: QueueBodyProps) {
   }
   const { items, total } = result.data
   if (items.length === 0) {
-    return (
-      <StatusMessage icon={Inbox} title={`No cases in ${queueLabel[queue]}`}>
+    return activeFilters(params) > 0 ? (
+      <StatusMessage icon={SearchX} title="No cases match these filters">
+        Try removing a filter, or clear them all.
+      </StatusMessage>
+    ) : (
+      <StatusMessage icon={Inbox} title={`No cases in ${queueLabel[params.queue]}`}>
         New complaints appear here on their own.
       </StatusMessage>
     )

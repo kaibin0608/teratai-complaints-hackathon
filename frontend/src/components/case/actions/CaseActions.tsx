@@ -33,12 +33,16 @@ export function CaseActions({ detail, onChanged }: CaseActionsProps) {
           {limit && <Headroom info={limit} />}
           {notice && <p className="text-body">{notice}</p>}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           {actions.map(({ key, emphasis, disabledReason }) => {
             const { label, icon: Icon } = ACTIONS[key]
             return (
               <span key={key} title={disabledReason}>
-                <Button variant={emphasis} disabled={Boolean(disabledReason)} onClick={() => setOpen(key)}>
+                <Button
+                  variant={emphasis === 'danger' ? 'danger-outline' : emphasis}
+                  disabled={Boolean(disabledReason)}
+                  onClick={() => setOpen(key)}
+                >
                   <Icon size={16} aria-hidden />
                   {label}
                 </Button>

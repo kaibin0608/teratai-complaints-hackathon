@@ -2,16 +2,21 @@ import { Badge } from '@/components/shared/Badge'
 import { Card } from '@/components/shared/Card'
 import { DetailList } from '@/components/shared/DetailList'
 import { formatIsoTime, formatMoney } from '@/lib/format'
-import { outcomeLabel } from '@/lib/labels'
-import type { CaseDetail, Outcome } from '@/lib/types'
+import { fraudOutcomeLabel, outcomeLabel } from '@/lib/labels'
+import { FRAUD_OUTCOMES, type CaseDetail, type FraudOutcome, type Outcome } from '@/lib/types'
 
-const finalLabel = (outcome: NonNullable<CaseDetail['final']>['outcome']) =>
-  outcome === null ? '—' : outcome === 'REJECTED' ? 'Rejected' : (outcomeLabel[outcome as Outcome] ?? outcome.replace(/_/g, ' '))
+const finalLabel = (outcome: NonNullable<CaseDetail['final']>['outcome']): string => {
+  if (outcome === null) return '—'
+  if (outcome === 'REJECTED') return 'Rejected'
+  if ((FRAUD_OUTCOMES as readonly string[]).includes(outcome)) return fraudOutcomeLabel[outcome as FraudOutcome]
+  return outcomeLabel[outcome as Outcome]
+}
 
 /** The agent's own decision (never changed) beside what people did. Shown once a person has acted. */
 export function AgentVsHumanCard({ detail }: { detail: CaseDetail }) {
   const { autonomous, final, differs } = detail
   if (!autonomous || !final) return null
+  const reason = detail.case.human_action?.reason
   const changed = differs.decision || differs.refund || differs.reply
 
   return (
@@ -31,6 +36,7 @@ export function AgentVsHumanCard({ detail }: { detail: CaseDetail }) {
             { label: 'Outcome', value: finalLabel(final.outcome), changed: differs.decision },
             { label: 'Refund', value: formatMoney(final.refund_amount_myr), changed: differs.refund },
             { label: 'Reply', value: final.sent ? 'Sent (simulated)' : 'Not sent', changed: differs.reply },
+            { label: 'Reason', value: reason ?? null },
             { label: 'When', value: formatIsoTime(final.at) },
           ]}
         />

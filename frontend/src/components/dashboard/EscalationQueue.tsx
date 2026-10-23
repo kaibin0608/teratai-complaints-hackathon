@@ -29,9 +29,10 @@ export function EscalationQueue() {
       )}
       {result.status === 'success' &&
         (result.data.items.length === 0 ? (
-          <StatusMessage icon={Inbox} title="Nothing escalated">
-            Cases an officer or analyst escalates (over their limit, or sensitive) appear here.
-          </StatusMessage>
+          <p className="flex items-center gap-2 text-sm text-secondary">
+            <Inbox size={16} aria-hidden />
+            Nothing is waiting for you. Cases an officer or analyst escalates (over their limit, or sensitive) appear here.
+          </p>
         ) : (
           <CaseTable items={result.data.items} />
         ))}
