@@ -275,6 +275,28 @@ A kept issue holds the case for an officer (`second_issue`). No scored field cha
 
 **Cost:** about RM0.0005 per complaint (RM0.97 for 1,750). Kill switch: `LLM_ISSUES=off`.
 
+## Extraction model comparison (2026-10-23)
+
+Only the extraction model changes. The prompt (`extract-v2`), Dev A's engine (current `dev`, with the C3 language fix and the fallback fix) and the leaderboard's scorer (`scoring/score.py`) are the same for every model. No reply drafting and no second-issue check; every call is fresh (no cache), so speed and cost are comparable. Run with `python -m backend.eval.model_compare` (`backend/eval/model_compare.py`).
+
+| Set | DeepSeek v4 Flash (current) | DeepSeek v4.1 Flash | Claude Haiku 5.5 | GPT-6 Luna |
+|---|---|---|---|---|
+| Holdout (340, never tuned on) | 100.00 | 100.00 | 100.00 | 100.00 |
+| Messy (42, hidden-test style) | 99.40 | 99.40 | 99.40 | 99.40 |
+| Language misses (22, from `langmiss_ids.txt`) | 100.00 | 100.00 | 100.00 | 100.00 |
+| Critical errors / failed calls | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Speed per call, holdout (p50 / p95) | 7.0 s / 15.9 s | **1.9 s / 3.0 s** | 1.6 s / 2.6 s | 2.6 s / 3.9 s |
+| Cost per complaint (holdout) | RM0.00056 | RM0.00076 | RM0.0029 | RM0.0016 |
+
+Notes on the table:
+- Every model gets every transaction, category and outcome right on all three sets.
+- The messy set's 99.40 is the same 5 reply-language "misses" for every model. They're label artifacts: the rewrites turned single-language originals into mixed text, while the labels describe the originals.
+- **No model raises the score; they differ only in speed and cost.**
+
+**Haiku 5.5 and GPT-6 Luna reject `temperature`.** With OpenRouter's `provider.require_parameters` (which we use to guarantee strict JSON), a request with `temperature` gets **HTTP 404 "No endpoints found that can handle the requested parameters"**, so in a first run every call fell back to keywords. The comparison leaves `temperature` out for those two (`--no-temperature`); DeepSeek is sent exactly what production sends. To use either model in production, the adapter would need the same change.
+
+**Decision (Dev B, 2026-10-23): keep DeepSeek v4 Flash** for the freeze; it's fully proven end to end. DeepSeek v4.1 Flash is the only candidate worth switching to: the same accuracy, about 3.7× faster, about 35% more cost (still under a tenth of a sen). Switch only if a full re-check (training run, regenerated `predictions.csv`, `api_check`) can be finished well before 15:00. Haiku is about as fast as v4.1 at about 4× its cost; GPT-6 Luna is slower than v4.1 and costs more.
+
 ## How to reproduce
 
 Needs `OPENROUTER_API_KEY` in `.env`. LLM responses are cached in `backend/.cache/llm_cache.db`, so a rerun with the same prompt and model costs nothing.
