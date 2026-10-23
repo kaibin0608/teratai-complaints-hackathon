@@ -3,6 +3,8 @@
 viewer: read routes. No token and AUTH_REQUIRED off → None, meaning the manager's view (the UI before its login page).
 actor: write actions. Always needs a valid token: the person acting comes from it.
 The user is loaded from the database on every request, so a role change applies at once.
+Both are async on purpose: FastAPI runs plain-function dependencies in a thread pool, and the store has one SQLite
+connection that must only be used from the event loop (several requests at once collided and gave false 401s).
 Never used on the organisers' contract routes.
 """
 from __future__ import annotations
@@ -39,7 +41,7 @@ def _user(request: Request, token: str) -> User:
     return user
 
 
-def viewer(request: Request) -> User | None:
+async def viewer(request: Request) -> User | None:
     token = _bearer(request)
     if token is None:
         if config.AUTH_REQUIRED:
@@ -48,7 +50,7 @@ def viewer(request: Request) -> User | None:
     return _user(request, token)
 
 
-def actor(request: Request) -> User:
+async def actor(request: Request) -> User:
     token = _bearer(request)
     if token is None:
         raise _unauthorised("login required")

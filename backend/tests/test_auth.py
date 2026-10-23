@@ -83,3 +83,21 @@ def test_locked_mode_needs_a_token_but_contract_routes_stay_open(client, monkeyp
 
 def test_a_bad_token_is_refused_even_in_open_mode(client):
     assert client.get("/api/cases", headers=bearer("garbage")).status_code == 401
+
+
+def test_login_checks_run_on_the_event_loop():
+    """Sync dependencies run in FastAPI's thread pool and share the store's one SQLite connection across threads;
+    requests sent together then collided (InterfaceError, false 401). They must stay async."""
+    import inspect
+    from backend.auth import dependencies
+    assert inspect.iscoroutinefunction(dependencies.viewer) and inspect.iscoroutinefunction(dependencies.actor)
+
+
+def test_many_signed_in_requests_at_once(client):
+    """The UI fires several requests together; none may fail with a false 401."""
+    from concurrent.futures import ThreadPoolExecutor
+    headers = bearer(login(client, "manager1").json()["token"])
+    paths = ["/api/cases", "/api/metrics", "/api/audit", "/api/users", "/api/auth/me"] * 8
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        codes = list(pool.map(lambda path: client.get(path, headers=headers).status_code, paths))
+    assert codes == [200] * len(paths)
