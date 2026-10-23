@@ -1,5 +1,5 @@
 import { CircleAlert, LoaderCircle, RotateCw } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Button } from '@/components/shared/Button'
 import { StatusMessage } from '@/components/shared/StatusMessage'
 import { Tabs } from '@/components/shared/Tabs'
@@ -14,7 +14,7 @@ const TABS = [
 ] as const
 
 /** Loads `GET /api/metrics` once (polled): the headline numbers, then three tabs of detail. */
-export function MetricsDashboard() {
+export function MetricsDashboard({ between }: { between?: ReactNode }) {
   const result = useMetrics()
   const [tab, setTab] = useState<(typeof TABS)[number]['value']>('overview')
   if (result.status === 'loading') return <StatusMessage busy icon={LoaderCircle} title="Loading the numbers…" />
@@ -38,6 +38,7 @@ export function MetricsDashboard() {
   return (
     <div className="flex flex-col gap-section">
       <Headline m={m} />
+      {between}
       <Tabs label="Dashboard sections" items={TABS} value={tab} onChange={setTab} />
       {tab === 'overview' && <OverviewTab m={m} />}
       {tab === 'agent' && <AgentTab m={m} />}

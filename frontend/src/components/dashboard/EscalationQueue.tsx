@@ -11,6 +11,7 @@ export function EscalationQueue() {
   const total = result.status === 'success' ? result.data.total : undefined
 
   return (
+    <div id="escalated" className="scroll-mt-4">
     <Card title="Escalated: waiting for you" aside={total !== undefined && <span className="text-xs text-secondary tabular-nums">{total}</span>}>
       {result.status === 'loading' && <StatusMessage busy icon={LoaderCircle} title="Loading…" />}
       {result.status === 'error' && (
@@ -37,5 +38,6 @@ export function EscalationQueue() {
           <CaseTable items={result.data.items} />
         ))}
     </Card>
+    </div>
   )
 }

@@ -10,7 +10,8 @@ import { SLATimer } from '@/components/shared/SLATimer'
 import { VulnerableBadge } from '@/components/shared/VulnerableBadge'
 import { WorkflowBadge } from '@/components/shared/WorkflowBadge'
 import { actionLabel } from '@/lib/events'
-import { formatIsoTime, formatMoney } from '@/lib/format'
+import { mytToMs, now } from '@/lib/clock'
+import { formatDuration, formatIsoTime, formatMoney } from '@/lib/format'
 import { holdReasonLabel, outcomeLabel } from '@/lib/labels'
 import { paths } from '@/lib/paths'
 import type { CaseListItem } from '@/lib/types'
@@ -142,6 +143,7 @@ function StatusCell({ item }: { item: CaseListItem }) {
       {item.escalation && item.workflow === 'escalated' && (
         <span className="text-xs text-secondary">
           {nameOf(item.escalation.by)}: {item.escalation.reason}
+          <span className="block font-medium text-warning-800">Waiting {formatDuration(mytToMs(now()) - mytToMs(item.escalation.at))}</span>
         </span>
       )}
       {item.assigned_to && <span className="text-xs text-secondary">Assigned to {nameOf(item.assigned_to)}</span>}
