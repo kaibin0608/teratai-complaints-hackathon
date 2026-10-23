@@ -84,14 +84,24 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (authToken) headers.Authorization = `Bearer ${authToken}`
 
-  let response: Response
-  try {
-    response = await fetch(`${BASE_URL}${path}${toQueryString(query)}`, {
+  const send = () =>
+    fetch(`${BASE_URL}${path}${toQueryString(query)}`, {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
       signal,
     })
+
+  let response: Response
+  try {
+    response = await send()
+    // A 401 on a signed-in request is retried once before it ends the session: the server checks the login before it
+    // does anything, so repeating is safe, and a one-off failure (several requests at once, a busy backend) must not
+    // sign someone out. A genuinely expired or invalid login fails the second time too.
+    if (response.status === 401 && headers.Authorization) {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      response = await send()
+    }
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error
     setReachable(false)

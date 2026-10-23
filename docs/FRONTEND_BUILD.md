@@ -115,6 +115,8 @@ Every route in `docs/UI_API.md` is used: `POST /api/auth/login`, `GET /api/auth/
 
 ## Open requests for Dev B (not blockers)
 
+0. **A real bug: one shared database connection.** `backend/db/store.py` opens a single SQLite connection (`check_same_thread=False`) and every request uses it at once. When a page sends several requests together, some collide: the backend log shows `sqlite3.InterfaceError: bad parameter or other API misuse` inside `get_user`, followed by `401` on valid logins, so people were signed out at random. Fix: a lock around the connection, or one connection per request or thread. The frontend now retries a 401 once before signing anyone out, which hides the symptom but does not cure it.
+
 1. **Related transactions on the same account** for the fraud workbench (PLAN §3.4). `evidence.related_txns` only carries a duplicate's earlier charge, so the UI shows what it is given.
 2. **A customer search** (`GET /api/customers?q=`) for autocomplete on the Intake form; today the customer ID is typed.
 3. **A retry for failed cases** (STATUS O2): the UI shows an agent error but has nothing to call.
