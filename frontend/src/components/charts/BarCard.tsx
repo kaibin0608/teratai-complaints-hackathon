@@ -47,7 +47,7 @@ export function BarCard({ title, subtitle, items, sort = true, unit = 'Cases' }:
               >
                 <span className="text-sm leading-tight text-body">{row.label}</span>
                 <span className="flex items-center gap-2">
-                  {row.value > 0 && <span aria-hidden className="h-2.5 rounded-r-[4px] bg-chart-1" style={{ width: `${(row.value / max) * 100}%`, minWidth: 4 }} />}
+                  {row.value > 0 && <span aria-hidden className="h-2.5 rounded-r-[4px] bg-data" style={{ width: `${(row.value / max) * 100}%`, minWidth: 4 }} />}
                   <span className="text-xs whitespace-nowrap text-primary tabular-nums">
                     {row.value}
                     <span className="ml-1 text-secondary">{formatPercent(share(row.value))}</span>

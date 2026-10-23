@@ -78,7 +78,7 @@ export function TrendCard({ days }: { days: readonly Day[] }) {
                 return (
                   <g key={d.date}>
                     {hover === i && <rect x={MARGIN.left + i * step} y={MARGIN.top} width={step} height={PLOT_H} className="fill-neutral-50" />}
-                    {d.total > 0 && <path d={columnPath(x, y(d.total), barWidth, height)} className="fill-chart-1" />}
+                    {d.total > 0 && <path d={columnPath(x, y(d.total), barWidth, height)} className="fill-data" />}
                   </g>
                 )
               })}
