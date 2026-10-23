@@ -1,22 +1,11 @@
 import { LoaderCircle } from 'lucide-react'
 import { useParams } from 'react-router'
+import { AgentPane } from '@/components/case/agent/AgentPane'
 import { CaseActions } from '@/components/case/actions/CaseActions'
-import { AgentVsHumanCard } from '@/components/case/AgentVsHumanCard'
+import { CaseTabs } from '@/components/case/CaseTabs'
 import { CaseBanners } from '@/components/case/CaseBanners'
 import { CaseLoadError } from '@/components/case/CaseLoadError'
 import { CaseSla } from '@/components/case/CaseSla'
-import { ChatCard } from '@/components/case/ChatCard'
-import { CluesCard } from '@/components/case/CluesCard'
-import { ComplaintCard } from '@/components/case/ComplaintCard'
-import { CustomerCard } from '@/components/case/CustomerCard'
-import { DecisionCard } from '@/components/case/DecisionCard'
-import { EvidenceCard } from '@/components/case/EvidenceCard'
-import { FraudOutcomeCard } from '@/components/case/FraudOutcomeCard'
-import { MatchCard } from '@/components/case/MatchCard'
-import { ReplyCard } from '@/components/case/ReplyCard'
-import { RunsCard } from '@/components/case/RunsCard'
-import { TimelineCard } from '@/components/case/TimelineCard'
-import { UsageCard } from '@/components/case/UsageCard'
 import { Page } from '@/components/layout/Page'
 import { CategoryBadge } from '@/components/shared/CategoryBadge'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
@@ -72,28 +61,14 @@ export function CaseDetail() {
       }
       actions={<CaseSla detail={detail} />}
       footer={<CaseActions detail={detail} onChanged={result.reload} />}
+      fill
     >
-      <div className="flex flex-col gap-section">
+      <div className="flex flex-col gap-section xl:h-full">
         <CaseBanners detail={detail} />
-        <div className="grid items-start gap-section lg:grid-cols-2">
-          <div className="flex flex-col gap-section">
-            <ComplaintCard detail={detail} />
-            <CluesCard detail={detail} />
-            <CustomerCard detail={detail} />
-            <EvidenceCard detail={detail} />
-            <MatchCard detail={detail} />
-          </div>
-          <div className="flex flex-col gap-section">
-            <DecisionCard detail={detail} />
-            <FraudOutcomeCard detail={detail} />
-            <ReplyCard detail={detail} />
-            <AgentVsHumanCard detail={detail} />
-            <ChatCard key={detail.case.complaint_id} detail={detail} />
-            <RunsCard detail={detail} />
-            <UsageCard detail={detail} />
-          </div>
+        <div className="grid items-start gap-section xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_27rem]">
+          <AgentPane key={detail.case.complaint_id} detail={detail} />
+          <CaseTabs key={`tabs-${detail.case.complaint_id}`} detail={detail} />
         </div>
-        <TimelineCard detail={detail} />
       </div>
     </Page>
   )

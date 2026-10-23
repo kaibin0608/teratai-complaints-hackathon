@@ -1,6 +1,7 @@
 import { ChevronLeft } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
+import { cx } from '@/lib/cx'
 
 interface PageProps {
   title: ReactNode
@@ -12,11 +13,13 @@ interface PageProps {
   actions?: ReactNode
   /** A bar pinned below the scrolling content (e.g. a case's decision bar). */
   footer?: ReactNode
+  /** From 1280 px the content fills the panel and scrolls inside its own panes instead of as one page. */
+  fill?: boolean
   children?: ReactNode
 }
 
 /** A screen inside the content panel: title bar with a hairline, scrolling content, optional pinned footer. */
-export function Page({ title, back, meta, actions, footer, children }: PageProps) {
+export function Page({ title, back, meta, actions, footer, fill, children }: PageProps) {
   return (
     <>
       <header className="flex min-h-header shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-b border-default px-card py-2">
@@ -36,7 +39,7 @@ export function Page({ title, back, meta, actions, footer, children }: PageProps
         </div>
         {actions && <div className="flex flex-wrap items-center gap-1.5">{actions}</div>}
       </header>
-      <div className="min-h-0 flex-1 overflow-auto p-card">{children}</div>
+      <div className={cx('min-h-0 flex-1 overflow-auto p-card', fill && 'xl:overflow-hidden')}>{children}</div>
       {footer && <footer className="shrink-0 border-t border-default bg-card px-card py-3">{footer}</footer>}
     </>
   )
