@@ -110,6 +110,7 @@
   --color-chart-4: #e08a1e;
   --color-chart-5: #2f7fd6;
   --color-chart-6: #7a6e7c;
+  --color-chart-7: #3b6e8f;
 
   /* Semantic — surfaces: bg-page, bg-card, bg-subtle, bg-selected, bg-inverse.
      The sidebar sits on bg-page with no border; only the content panel (bg-card) is bordered. */

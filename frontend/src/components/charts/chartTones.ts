@@ -1,18 +1,9 @@
-/** The hue of a chart's marks. One hue per chart (the labels carry identity); literal classes so Tailwind generates them. */
-export type ChartTone = 'teal' | 'blue' | 'purple' | 'amber' | 'grey'
+/**
+ * Marks are coloured by what they stand for, in this fixed order (never by rank, so sorting does not repaint them).
+ * Every bar also has its label beside it, so colour is never the only way to tell them apart.
+ * Literal class names so Tailwind generates them.
+ */
+export const BAR_COLOURS = ['bg-chart-2', 'bg-chart-5', 'bg-chart-3', 'bg-chart-4', 'bg-chart-1', 'bg-chart-7', 'bg-chart-6'] as const
 
-export const BAR_FILL: Record<ChartTone, string> = {
-  teal: 'bg-chart-2',
-  blue: 'bg-chart-5',
-  purple: 'bg-chart-3',
-  amber: 'bg-chart-4',
-  grey: 'bg-chart-6',
-}
-
-export const COLUMN_FILL: Record<ChartTone, string> = {
-  teal: 'fill-chart-2',
-  blue: 'fill-chart-5',
-  purple: 'fill-chart-3',
-  amber: 'fill-chart-4',
-  grey: 'fill-chart-6',
-}
+/** Trend columns are one series, so one hue. */
+export const COLUMN_FILL = 'fill-chart-2'

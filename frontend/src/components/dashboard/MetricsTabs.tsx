@@ -20,10 +20,10 @@ export function OverviewTab({ m }: { m: Metrics }) {
     <div className="flex flex-col gap-section">
       <TrendCard days={m.trends.received_by_day} />
       <div className="grid gap-section lg:grid-cols-2">
-        <BarCard title="By category" tone="blue" subtitle="What customers complain about" items={items(CATEGORIES, cases.by_category, (k) => categoryLabel[k])} />
-        <BarCard title="By outcome" tone="purple" subtitle="What the policy decided" items={items(OUTCOMES, cases.by_outcome, (k) => outcomeLabel[k])} />
-        <BarCard title="By route" tone="teal" subtitle="Who handles it next" items={items(ROUTES, cases.by_route, (k) => routeLabel[k])} />
-        <BarCard title="By priority" tone="amber" subtitle="After the 65+ rule" sort={false} items={items(PRIORITIES, cases.by_priority, (k) => k)} />
+        <BarCard title="By category" subtitle="What customers complain about" items={items(CATEGORIES, cases.by_category, (k) => categoryLabel[k])} />
+        <BarCard title="By outcome" subtitle="What the policy decided" items={items(OUTCOMES, cases.by_outcome, (k) => outcomeLabel[k])} />
+        <BarCard title="By route" subtitle="Who handles it next" items={items(ROUTES, cases.by_route, (k) => routeLabel[k])} />
+        <BarCard title="By priority" subtitle="After the 65+ rule" sort={false} items={items(PRIORITIES, cases.by_priority, (k) => k)} />
       </div>
     </div>
   )
@@ -71,10 +71,10 @@ export function AgentTab({ m }: { m: Metrics }) {
           ))}
         </dl>
       </Card>
-      <BarCard title="Held for review" tone="grey" subtitle="Why the agent did not decide alone" items={items(HOLD_REASONS, m.holds.by_reason, (k) => holdReasonLabel[k])} />
+      <BarCard title="Held for review" subtitle="Why the agent did not decide alone" items={items(HOLD_REASONS, m.holds.by_reason, (k) => holdReasonLabel[k])} />
       <BarCard
         title="Reply language"
-        tone="blue"
+       
         subtitle="The language of the reply"
         items={Object.entries(m.cases.by_language).map(([key, value]) => ({ label: LANGUAGE[key as keyof typeof LANGUAGE] ?? key, value }))}
       />
@@ -106,8 +106,8 @@ export function PeopleTab({ m }: { m: Metrics }) {
           { label: 'Rejected', value: formatMoney(refunds.rejected), detail: 'refunds a person declined to send' },
         ]}
       />
-      <BarCard title="By workflow" tone="purple" subtitle="Cases touched by the ops platform" items={items(WORKFLOWS, cases.by_workflow, (k) => workflowLabel[k])} />
-      <BarCard title="By channel" tone="teal" subtitle="Where complaints arrive" items={Object.entries(cases.by_channel).map(([label, value]) => ({ label, value }))} />
+      <BarCard title="By workflow" subtitle="Cases touched by the ops platform" items={items(WORKFLOWS, cases.by_workflow, (k) => workflowLabel[k])} />
+      <BarCard title="By channel" subtitle="Where complaints arrive" items={Object.entries(cases.by_channel).map(([label, value]) => ({ label, value }))} />
     </div>
   )
 }
