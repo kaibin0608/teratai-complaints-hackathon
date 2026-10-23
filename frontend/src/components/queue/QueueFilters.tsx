@@ -1,7 +1,7 @@
 import { ListFilter, Search, X } from 'lucide-react'
-import { useEffect, useEffectEvent, useRef, useState, type ComponentProps, type ReactNode } from 'react'
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from 'react'
 import { controlClass } from '@/components/shared/FieldShell'
-import { SelectShell, selectClass } from '@/components/shared/SelectShell'
+import { FilterSelect } from '@/components/shared/FilterSelect'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { cx } from '@/lib/cx'
 import { categoryLabel, holdReasonLabel, workflowLabel } from '@/lib/labels'
@@ -78,8 +78,8 @@ export function QueueFilters({ params, workflowCounts, showChanged, onChange, on
           )}
         </div>
 
-        <Select label="Category" value={params.category} onChange={(v) => onChange('category', v)} options={CATEGORIES.map((v) => [v, categoryLabel[v]])} />
-        <Select label="Priority" value={params.priority} onChange={(v) => onChange('priority', v)} options={PRIORITIES.map((v) => [v, v])} />
+        <FilterSelect label="Category" value={params.category} onChange={(v) => onChange('category', v)} options={CATEGORIES.map((v) => [v, categoryLabel[v]])} />
+        <FilterSelect label="Priority" value={params.priority} onChange={(v) => onChange('priority', v)} options={PRIORITIES.map((v) => [v, v])} />
 
         <button
           type="button"
@@ -114,19 +114,19 @@ export function QueueFilters({ params, workflowCounts, showChanged, onChange, on
 
       {expanded && (
         <div className="flex flex-wrap items-center gap-2 rounded-control bg-subtle px-2.5 py-2">
-          <Select
+          <FilterSelect
             label="Hold"
             value={params.hold}
             onChange={(v) => onChange('hold', v)}
             options={[['none', 'Not held'], ...HOLD_REASONS.map((v) => [v, holdReasonLabel[v]] as const)]}
           />
-          <Select
+          <FilterSelect
             label="Workflow"
             value={params.workflow}
             onChange={(v) => onChange('workflow', v)}
             options={WORKFLOWS.map((v) => [v, `${workflowLabel[v]}${workflowCounts ? ` (${workflowCounts[v]})` : ''}`])}
           />
-          <Select
+          <FilterSelect
             label="Assigned"
             value={params.assigned}
             onChange={(v) => onChange('assigned', v as Assigned | null)}
@@ -140,34 +140,6 @@ export function QueueFilters({ params, workflowCounts, showChanged, onChange, on
         </div>
       )}
     </div>
-  )
-}
-
-interface SelectProps {
-  label: string
-  value: string | null
-  onChange: (value: string | null) => void
-  options: readonly (readonly [string, string])[]
-}
-
-/** A compact filter menu whose first entry ("Category: any") clears it. */
-function Select({ label, value, onChange, options }: SelectProps) {
-  const props: ComponentProps<'select'> = {
-    'aria-label': label,
-    value: value ?? '',
-    onChange: (event) => onChange(event.target.value || null),
-  }
-  return (
-    <SelectShell>
-      <select {...props} className={cx('h-9', selectClass, controlClass, value && 'border-brand-600 bg-brand-50 font-medium text-brand-800')}>
-        <option value="">{label}: any</option>
-        {options.map(([optionValue, optionLabel]) => (
-          <option key={optionValue} value={optionValue}>
-            {optionLabel}
-          </option>
-        ))}
-      </select>
-    </SelectShell>
   )
 }
 

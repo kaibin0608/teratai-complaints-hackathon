@@ -1,12 +1,13 @@
-import { CircleAlert, Download, Inbox, LoaderCircle, RotateCw } from 'lucide-react'
+import { CircleAlert, Download, Inbox, LoaderCircle, RotateCw, Search, X } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/shared/Button'
-import { SelectField } from '@/components/shared/SelectField'
+import { controlClass } from '@/components/shared/FieldShell'
+import { FilterSelect } from '@/components/shared/FilterSelect'
 import { StatusMessage } from '@/components/shared/StatusMessage'
-import { TextField } from '@/components/shared/TextField'
 import { useAuditLog } from '@/hooks/useAuditLog'
 import { downloadCsv } from '@/lib/csv'
-import { describeEvent } from '@/lib/events'
+import { cx } from '@/lib/cx'
+import { actionLabel, describeEvent } from '@/lib/events'
 import { formatIsoTime } from '@/lib/format'
 import type { AuditEvent, AuditQuery } from '@/lib/types'
 import { AuditTable } from './AuditTable'
@@ -48,39 +49,50 @@ export function AuditLogView() {
   }
 
   const facets = result.status === 'success' ? result.data.facets : { actors: [], actions: [] }
+  // Keep a chosen value in the menu even if the current results no longer list it.
   const withCurrent = (values: string[], current: string) => (current && !values.includes(current) ? [current, ...values] : values)
-  const options = (values: string[], current: string, any: string, label: (value: string) => string = (value) => value) => [
-    { value: ANY, label: any },
-    ...withCurrent(values, current).map((value) => ({ value, label: label(value) })),
-  ]
+  const menu = (values: string[], current: string, label: (value: string) => string): [string, string][] =>
+    withCurrent(values, current).map((value) => [value, label(value)])
+  const active = [filters.actor, filters.action, filters.caseId.trim(), filters.since, filters.until, filters.peopleOnly].filter(Boolean).length
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="w-52">
-          <SelectField label="Who" value={filters.actor} onChange={(e) => change({ actor: e.target.value })} options={options(facets.actors, filters.actor, 'Anyone', nameOf)} />
-        </div>
-        <div className="w-52">
-          <SelectField
-            label="What"
-            value={filters.action}
-            onChange={(e) => change({ action: e.target.value })}
-            options={options(facets.actions, filters.action, 'Any action')}
+      <div className="flex flex-wrap items-center gap-2">
+        <FilterSelect label="Who" anyLabel="Who: anyone" value={filters.actor || null} onChange={(value) => change({ actor: value ?? ANY })} options={menu(facets.actors, filters.actor, nameOf)} />
+        <FilterSelect label="What" anyLabel="What: any action" className="w-44" value={filters.action || null} onChange={(value) => change({ action: value ?? ANY })} options={menu(facets.actions, filters.action, actionLabel)} />
+
+        <div className="relative w-36">
+          <Search size={16} aria-hidden className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-secondary" />
+          <input
+            type="text"
+            value={filters.caseId}
+            onChange={(event) => change({ caseId: event.target.value })}
+            placeholder="Case ID"
+            aria-label="Case ID"
+            className={cx('h-9 w-full pl-9', controlClass)}
           />
         </div>
-        <div className="w-44">
-          <TextField label="Case" placeholder="CMP-00244" value={filters.caseId} onChange={(e) => change({ caseId: e.target.value })} />
+
+        <div className="flex items-center gap-1.5">
+          <input type="date" aria-label="From date" value={filters.since} max={filters.until || undefined} onChange={(event) => change({ since: event.target.value })} className={cx('h-9 w-34', controlClass)} />
+          <span aria-hidden className="text-secondary">
+            –
+          </span>
+          <input type="date" aria-label="To date" value={filters.until} min={filters.since || undefined} onChange={(event) => change({ until: event.target.value })} className={cx('h-9 w-34', controlClass)} />
         </div>
-        <div className="w-40">
-          <TextField label="From" type="date" required={false} value={filters.since} max={filters.until || undefined} onChange={(e) => change({ since: e.target.value })} />
-        </div>
-        <div className="w-40">
-          <TextField label="To" type="date" required={false} value={filters.until} min={filters.since || undefined} onChange={(e) => change({ until: e.target.value })} />
-        </div>
+
         <label className="flex h-9 items-center gap-2 text-sm text-body">
-          <input type="checkbox" checked={filters.peopleOnly} onChange={(e) => change({ peopleOnly: e.target.checked })} className="size-4 accent-brand-600" />
+          <input type="checkbox" checked={filters.peopleOnly} onChange={(event) => change({ peopleOnly: event.target.checked })} className="size-4 accent-brand-600" />
           People only
         </label>
+
+        {active > 0 && (
+          <button type="button" onClick={() => change({ actor: ANY, action: ANY, caseId: '', since: '', until: '', peopleOnly: false })} className="flex items-center gap-1 text-xs font-medium text-link hover:text-link-hover">
+            <X size={12} aria-hidden />
+            Clear ({active})
+          </button>
+        )}
+
         <div className="ml-auto">
           <ExportButton result={result} />
         </div>
