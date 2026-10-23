@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { fraudAnalyst, manager, officer } from '@/test/fixtures'
-import { ADVANCING, doneMessage, homeAfter, nextCaseQuery, pickNext } from './advance'
+import { ADVANCING, homeAfter, nextCaseQuery, pickNext } from './advance'
 import { paths } from './paths'
 import type { CaseListItem } from './types'
 
@@ -72,10 +72,5 @@ describe('where to go, and what to say, afterwards', () => {
   it('sends the manager to the console after a second-tier decision, otherwise to all cases', () => {
     expect(homeAfter('second-tier-reject', manager)).toBe(paths.manager)
     expect(homeAfter('approve', manager)).toBe(paths.cases)
-  })
-
-  it('names what was done', () => {
-    expect(doneMessage('approve', 'CMP-00244')).toBe('Approved CMP-00244.')
-    expect(doneMessage('record-outcome', 'CMP-00138')).toBe('Recorded the outcome of CMP-00138.')
   })
 })

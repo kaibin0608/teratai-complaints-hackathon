@@ -16,19 +16,6 @@ export const ADVANCING: ReadonlySet<ActionKey> = new Set<ActionKey>([
   'record-outcome',
 ])
 
-const PAST_TENSE: Partial<Record<ActionKey, string>> = {
-  approve: 'Approved',
-  reject: 'Rejected',
-  'send-back': 'Sent back to the agent',
-  escalate: 'Escalated to the manager',
-  'second-tier-approve': 'Approved',
-  'second-tier-reject': 'Rejected',
-  'record-outcome': 'Recorded the outcome of',
-}
-
-/** "Approved CMP-00244." / "Recorded the outcome of CMP-00138." */
-export const doneMessage = (action: ActionKey, complaintId: string): string => `${PAST_TENSE[action] ?? 'Updated'} ${complaintId}.`
-
 /** Where the next case that needs this person lives: first-tier users their own untouched queue, the manager escalations. */
 export function nextCaseQuery(action: ActionKey, user: User): CaseListQuery {
   const base = { sort: 'priority', limit: 10 } as const

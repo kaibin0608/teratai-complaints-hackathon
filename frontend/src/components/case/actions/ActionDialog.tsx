@@ -9,8 +9,11 @@ import { SelectField } from '@/components/shared/SelectField'
 import { TextArea } from '@/components/shared/TextArea'
 import { TextField } from '@/components/shared/TextField'
 import { useAdvance } from '@/hooks/useAdvance'
+import { useToast } from '@/hooks/useToast'
 import type { ActionKey } from '@/lib/actions'
 import { ADVANCING } from '@/lib/advance'
+import { actionToast, withAdvance } from '@/lib/notifications'
+import { paths } from '@/lib/paths'
 import type { ActionBodies, CaseDetail } from '@/lib/types'
 import { ACTIONS, type FieldSpec } from './actionConfig'
 import { UserSelect } from './UserSelect'
@@ -51,6 +54,7 @@ function ActionForm({ action, detail, onClose, onChanged }: ActionFormProps) {
   const spec = ACTIONS[action]
   const nameOf = useNameOf()
   const advance = useAdvance()
+  const toast = useToast()
   const [state, setState] = useState<FormState>({ status: 'idle' })
   const pending = state.status === 'pending'
   const description = spec.description(detail, nameOf)
@@ -68,13 +72,17 @@ function ActionForm({ action, detail, onClose, onChanged }: ActionFormProps) {
     setState({ status: 'pending' })
     try {
       // The field specs mirror ActionBodies; the backend validates the rest.
-      const next = await casesApi.act(detail.case.complaint_id, action, body as ActionBodies[ActionKey])
+      const id = detail.case.complaint_id
+      const next = await casesApi.act(id, action, body as ActionBodies[ActionKey])
+      const done = actionToast(action, detail, body, nameOf)
       if (ADVANCING.has(action)) {
         // Finished with this case: close the dialog first (it would otherwise stay open on the next case), then move on.
         onClose()
-        await advance(action, detail.case.complaint_id)
+        const advanced = await advance(action, id)
+        if (done) toast.show(withAdvance(done, id, advanced, paths.case(id)))
         return
       }
+      if (done) toast.show(done)
       onChanged()
       if (action === 'edit-reply') setState({ status: 'saved', draft: next.draft_reply })
       else onClose()

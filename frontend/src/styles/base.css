@@ -43,3 +43,26 @@
     box-shadow: var(--focus-ring);
   }
 }
+
+/* Toasts slide up a little as they arrive; no movement for people who ask for less. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}

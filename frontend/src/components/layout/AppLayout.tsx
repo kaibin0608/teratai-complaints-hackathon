@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/useToast'
 import { Sidebar } from './Sidebar'
 import { PeopleProvider } from '@/context/PeopleProvider'
 
@@ -9,11 +10,15 @@ import { PeopleProvider } from '@/context/PeopleProvider'
  */
 export function AppLayout() {
   const auth = useAuth()
+  const toast = useToast()
   if (auth.status !== 'signed_in') return null
   return (
     <PeopleProvider>
       <div className="flex h-dvh gap-frame p-frame">
-        <Sidebar user={auth.user} onSignOut={auth.logout} />
+        <Sidebar user={auth.user} onSignOut={() => {
+            auth.logout()
+            toast.show({ tone: 'neutral', title: 'You have signed out' })
+          }} />
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-card border border-default bg-card shadow-card">
           <Outlet />
         </main>

@@ -3,6 +3,7 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { HomeRedirect } from '@/components/layout/HomeRedirect'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { PublicOnlyRoute } from '@/components/layout/PublicOnlyRoute'
+import { RootLayout } from '@/components/layout/RootLayout'
 import { paths } from '@/lib/paths'
 import { AuditLog } from '@/pages/AuditLog'
 import { CaseDetail } from '@/pages/CaseDetail'
@@ -20,37 +21,42 @@ import { Policy } from '@/pages/Policy'
  */
 export const router = createBrowserRouter([
   {
-    element: <PublicOnlyRoute />,
-    children: [{ path: paths.login, element: <Login /> }],
-  },
-  {
-    element: <ProtectedRoute />,
+    element: <RootLayout />,
     children: [
       {
-        element: <AppLayout />,
+        element: <PublicOnlyRoute />,
+        children: [{ path: paths.login, element: <Login /> }],
+      },
+      {
+        element: <ProtectedRoute />,
         children: [
-          { path: paths.intake, element: <Intake /> },
-          { path: '/cases/:complaintId', element: <CaseDetail /> },
           {
-            element: <ProtectedRoute roles={['officer', 'manager']} />,
-            children: [{ path: paths.officer, element: <OfficerDesk /> }],
-          },
-          {
-            element: <ProtectedRoute roles={['fraud', 'manager']} />,
-            children: [{ path: paths.fraud, element: <FraudWorkbench /> }],
-          },
-          {
-            element: <ProtectedRoute roles={['manager']} />,
+            element: <AppLayout />,
             children: [
-              { path: paths.manager, element: <ManagerConsole /> },
-              { path: paths.cases, element: <Cases /> },
-              { path: paths.audit, element: <AuditLog /> },
-              { path: paths.policy, element: <Policy /> },
+              { path: paths.intake, element: <Intake /> },
+              { path: '/cases/:complaintId', element: <CaseDetail /> },
+              {
+                element: <ProtectedRoute roles={['officer', 'manager']} />,
+                children: [{ path: paths.officer, element: <OfficerDesk /> }],
+              },
+              {
+                element: <ProtectedRoute roles={['fraud', 'manager']} />,
+                children: [{ path: paths.fraud, element: <FraudWorkbench /> }],
+              },
+              {
+                element: <ProtectedRoute roles={['manager']} />,
+                children: [
+                  { path: paths.manager, element: <ManagerConsole /> },
+                  { path: paths.cases, element: <Cases /> },
+                  { path: paths.audit, element: <AuditLog /> },
+                  { path: paths.policy, element: <Policy /> },
+                ],
+              },
             ],
           },
         ],
       },
+      { path: '*', element: <HomeRedirect /> },
     ],
   },
-  { path: '*', element: <HomeRedirect /> },
 ])

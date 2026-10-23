@@ -1,7 +1,6 @@
 import { CircleAlert, Inbox, LoaderCircle, RotateCw, SearchX } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { NoticeBanner } from '@/components/layout/NoticeBanner'
 import { Button } from '@/components/shared/Button'
 import { StatusMessage } from '@/components/shared/StatusMessage'
 import { Tabs } from '@/components/shared/Tabs'
@@ -44,7 +43,6 @@ export function CaseQueue({ tabs }: { tabs: readonly Queue[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <NoticeBanner />
       <Tabs
         label="Queues"
         value={params.queue}

@@ -16,7 +16,6 @@ import { ReplyCard } from '@/components/case/ReplyCard'
 import { RunsCard } from '@/components/case/RunsCard'
 import { TimelineCard } from '@/components/case/TimelineCard'
 import { UsageCard } from '@/components/case/UsageCard'
-import { NoticeBanner } from '@/components/layout/NoticeBanner'
 import { Page } from '@/components/layout/Page'
 import { CategoryBadge } from '@/components/shared/CategoryBadge'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
@@ -74,7 +73,6 @@ export function CaseDetail() {
       footer={<CaseActions detail={detail} onChanged={result.reload} />}
     >
       <div className="flex flex-col gap-section">
-        <NoticeBanner />
         <CaseBanners detail={detail} />
         <div className="grid items-start gap-section lg:grid-cols-2">
           <div className="flex flex-col gap-section">

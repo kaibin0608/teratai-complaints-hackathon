@@ -12,6 +12,7 @@ import { formatIsoTime } from '@/lib/format'
 import type { AuditEvent, AuditQuery } from '@/lib/types'
 import { AuditTable } from './AuditTable'
 import { useNameOf } from '@/hooks/useNameOf'
+import { useToast } from '@/hooks/useToast'
 import type { NameOf } from '@/lib/people'
 
 const PAGE_SIZE = 100
@@ -107,9 +108,13 @@ type Result = ReturnType<typeof useAuditLog>
 
 function ExportButton({ result }: { result: Result }) {
   const nameOf = useNameOf()
+  const toast = useToast()
   const items = result.status === 'success' ? result.data.items : []
   return (
-    <Button disabled={items.length === 0} onClick={() => downloadCsv('audit-log.csv', toRows(items, nameOf))}>
+    <Button disabled={items.length === 0} onClick={() => {
+        downloadCsv('audit-log.csv', toRows(items, nameOf))
+        toast.show({ tone: 'success', title: `Exported ${items.length} audit ${items.length === 1 ? 'entry' : 'entries'}`, description: 'Saved as audit-log.csv in your downloads.' })
+      }}>
       <Download size={16} aria-hidden />
       Export CSV
     </Button>
