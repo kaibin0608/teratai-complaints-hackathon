@@ -2,7 +2,7 @@
 
 This file tracks progress against [PLAN.md](PLAN.md). When you finish an item, tick it (`[x]`) in the same PR. Owners: **A** is Dev A (decision engine), **B** is Dev B (LLM, pipeline, DB, API), **UI** is the UI developer.
 
-Last updated: 2026-10-23, after the S2 regeneration (`665f3bc`).
+Last updated: 2026-10-23, after the frontend merge (`88d1e2f`).
 
 ## Done
 
@@ -19,6 +19,7 @@ Last updated: 2026-10-23, after the S2 regeneration (`665f3bc`).
 - **The organisers' contract API** ([api.md](api.md)): `api_check` scores **100.0**, with 9/9 probes. Approve, edit & approve (self-check re-runs), reject, and fraud acknowledge are built.
 - **UI read API** ([UI_API.md](UI_API.md)): `GET /api/cases`, `GET /api/cases/{id}`, `GET /api/metrics`, `GET /api/audit`. CORS is open; there's no login yet.
 - **`backend.bat`:** double-click to start the backend on port 8000.
+- **Frontend** (`frontend/`, merged in `88d1e2f`): React 19 + TypeScript + Vite + Tailwind. Covers C1 and U1–U5, plus charts and SLA timers. Run it with `cd frontend`, `npm install`, `npm run dev` (http://localhost:5173). It typechecks and builds, and its 88 unit tests pass. **It has not been tested end to end against the backend yet (S4, S5).**
 - **Bonus platform backend** (B1–B9, `b-ops-platform`):
   - logins for 4 seeded users, role-filtered reads
   - two-tier approval (officers RM2,000, fraud RM5,000, 65+ always to the manager)
@@ -29,7 +30,7 @@ Last updated: 2026-10-23, after the S2 regeneration (`665f3bc`).
 
 ## Core (main ranking)
 
-- [ ] **C1 · Simple UI:** queues, one case (complaint, transaction, evidence, decision, reply, self-check), Approve / Edit & approve / Reject buttons. Needed for the 10-point human gate. *(UI, in progress; PLAN Phase 3)*
+- [x] **C1 · Simple UI:** queues, one case (complaint, transaction, evidence, decision, reply, self-check), Approve / Edit & approve / Reject buttons. Needed for the 10-point human gate. *(UI, `feat/frontend-foundation`; end-to-end check is S4)* The case page does not yet show `other_issues` (the second-issue quote).
 - [ ] **C2 · API reachable from the organisers' laptop** (venue Wi-Fi or a tunnel), for Checkpoint 2 on Day 2 at 12:00. *(B)*
 - [x] C3 · Reply-language fix: `agent/language_mix.py` checks the LLM's mixed-language flag in code (no English word → not mixed; LLM says not mixed but English + Malay words → mixed). Training reply_language 98.4% → 100%, score 99.92 → 100.00 on the same cached clues; messy set unchanged; 8 of 750 test replies change language, each matching a labelled training pattern. **Regenerate `predictions.csv` (S2) to pick it up.** *(A, `feat/a-reply-language`)*
 - [x] C4 · `categories/fee.py` fee-type match fixed: changed `any()` to `all()` for word matching, so "debit card annual fee" no longer matches "credit card annual fee". CMP-00010 now confidently matches the correct transaction. 2,334 tests pass. *(A, `feat/a-fee-type-fix`)*
@@ -56,18 +57,19 @@ Last updated: 2026-10-23, after the S2 regeneration (`665f3bc`).
 
 ## Bonus screens (PLAN Phase 3, after C1)
 
-- [ ] U1 · Login page, role-based redirect, role-aware menu *(UI)*
-- [ ] U2 · Officer Resolution Desk: limit headroom, "Escalate" instead of "Approve" when over the limit *(UI)*
-- [ ] U3 · Fraud Investigation Workbench: auth method, timeline, acknowledge → investigate → outcome *(UI)*
-- [ ] U4 · Manager Console: tiles, escalation queue, all cases, audit log, agent vs human *(UI)*
-- [ ] U5 · Intake form, for rehearsing. Optional. *(UI)*
+- [x] U1 · Login page, role-based redirect, role-aware menu *(UI)*
+- [x] U2 · Officer Resolution Desk: limit headroom, "Escalate" instead of "Approve" when over the limit *(UI)*
+- [x] U3 · Fraud Investigation Workbench: auth method, timeline, acknowledge → investigate → outcome *(UI)*
+- [x] U4 · Manager Console: tiles, escalation queue, all cases, audit log, agent vs human *(UI)*
+- [x] U5 · Intake form, for rehearsing. Optional. *(UI)* Form plus CSV paste.
+- [x] Manager Policy page (read-only, reads `data/*.csv`) *(UI)*
 
 ## Bonus extras (PLAN Phase 4, only if time is left)
 
 - [ ] X1 · WebSocket live push (`/ws`); polling stays as the fallback *(B + UI)*
-- [ ] X2 · Manager charts (the data is mostly in `/api/metrics`) *(UI)*
+- [x] X2 · Manager charts (the data is mostly in `/api/metrics`) *(UI)*
 - [ ] X3 · Chatbot panel (`POST /api/chat`, read-only) *(B + UI)*
-- [ ] X4 · SLA timers and notifications *(UI)*
+- [ ] X4 · SLA timers and notifications *(UI)* SLA timers are built (case page, queues, dashboard tiles); notifications are not.
 
 ## Small optional backend items
 
@@ -91,5 +93,5 @@ Last updated: 2026-10-23, after the S2 regeneration (`665f3bc`).
 - 65+ customers are always sensitive (they go to the manager); a manual flag also counts.
 - Send back is built.
 - The contract route stays open (typed name, no limits) but refuses escalated, re-running and closed cases.
-- All five dashboard additions are built. `AUTH_REQUIRED` stays off until the UI's login page exists.
+- All five dashboard additions are built. `AUTH_REQUIRED` stays off until the UI's login page exists. The login page now exists: decide whether to turn it on for the demo.
 - Limits: officers RM2,000, fraud analyst RM5,000, manager none.
