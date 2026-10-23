@@ -875,6 +875,172 @@ frontend/
 | Scoring edge cases | Run scorer after every change, analyze wrongs |
 | Frontend not ready | Pipeline + batch runner + API still deliver leaderboard and Checkpoint 2 |
 | Secrets leak (public repo) | Keys only in env vars; `.env` gitignored |
+| A complaint raises two issues; the second is dropped | Code-only second-issue check holds the case for an officer. See [Complaints with two issues](#complaints-with-two-issues) |
+
+---
+
+## Complaints with two issues
+
+Proposed by Dev A on 2026-10-23; it needs Dev B's agreement before any code is written.
+
+### The problem
+
+The extractor gives each complaint one category, so a second issue in the same message is dropped. When the main issue auto-resolves, no one ever reads the second. Nothing in the extraction prompt covers this.
+
+Six mixed complaints, run through the real LLM extractor and the engine. Every main issue was handled correctly, with a confident match and the right transaction:
+
+| Test | Second issue | Main category | Route | Does a person see the second issue? |
+|---|---|---|---|---|
+| Failed transfer + fee | "pastu ada caj fee pulak" | FAILED_TRANSFER, refund RM46.54 | AUTO_RESOLVE | **No** |
+| Duplicate + service | "staff kurang ajar and tak nak tolong" | DUPLICATE_CHARGE, refund RM149.87 | AUTO_RESOLVE | **No** |
+| ATM + service | "call hotline 3 kali xde org angkat" | ATM_NOT_DISPENSED, refund RM600 | HUMAN_APPROVAL | Yes, because the refund is over RM500 |
+| Fee + service | "app korang asyik logout" | FEE_DISPUTE, decline | HUMAN_APPROVAL | Yes, because declines are held |
+| Unauthorised + ATM | "atm pun tak keluar duit" | UNAUTHORISED_CARD, investigate | FRAUD_TEAM | Yes, by the fraud team |
+| Scam + unauthorised | "card transaction yg bukan saya buat" | SCAM_TRANSFER, investigate | FRAUD_TEAM | Yes, by the fraud team |
+
+The leaderboard score is not affected: each complaint has one label, and route is not scored. The risk is a judge testing this live.
+
+### The fix: a second-issue check in code
+
+After the engine decides, check whether the complaint body also carries a clear sign of a different category. If it does, hold the case for a person. Category, transaction, outcome, refund, priority and language stay exactly as the agent decided; only `route` and `hold_reason` change.
+
+1. Extraction and the engine run as today.
+2. In `finalize_decision` (`router.py`), call `find_second_issues(updated.category, complaint.text)`. Put the call after the existing hold step and before the customer-not-found check.
+3. It scans the body, not the subject, for phrases that belong to another category:
+
+   | Category | Phrases |
+   |---|---|
+   | SCAM | scam, tipu, penipu, scammer |
+   | ATM | `atm` as a whole word |
+   | DUPLICATE | twice, dua kali, 2 kali, double |
+   | UNAUTHORISED | bukan saya, did not make, didn't make, not me, tak buat, tidak membuat |
+   | FEE | fee(s), caj, yuran, service charge |
+   | FAILED | duitnow, ibg, or "transfer" followed by fail / gagal / tak sampai / did not arrive |
+   | SERVICE | hotline, call centre, staff, kakitangan, rude, kurang ajar, logout, log out, queue, beratur, no one answered, tak angkat, xde org |
+
+4. Normal overlaps are ignored. A scam story often says "transfer" or "failed", and an unauthorised complaint can say "tipu". These cases go to FRAUD_TEAM anyway.
+5. If anything is found, call `hold(decision, "second_issue")`. The existing `hold()` keeps an earlier hold reason, keeps INVESTIGATE on FRAUD_TEAM and sends everything else to HUMAN_APPROVAL.
+6. Because the route is now HUMAN_APPROVAL, the reply uses the "will be credited after review" wording, and nothing is sent until an officer approves.
+7. The officer sees "Complaint raises a second issue", reads the text, and uses Edit & approve to acknowledge it. The self-check re-runs on the edited reply.
+
+```python
+# backend/agent/second_issue.py  (Dev A)
+CUES: dict[str, list[re.Pattern]] = {...}           # the table above
+NATURAL_OVERLAP = {"SCAM_TRANSFER": {"FAILED_TRANSFER", "UNAUTHORISED_CARD"},
+                   "UNAUTHORISED_CARD": {"SCAM_TRANSFER"}}
+
+def find_second_issues(category: str, text: str) -> list[str]:
+    t = text.lower()
+    skip = NATURAL_OVERLAP.get(category, set()) | {category}
+    return [c for c, pats in CUES.items() if c not in skip and any(p.search(t) for p in pats)]
+```
+
+### Evidence
+
+We tried the phrase list on real data with a scratch script; nothing is committed yet.
+
+| Set | Complaints | Flagged | Meaning |
+|---|---|---|---|
+| Mixed tests | 6 | 5 | All caught. Scam + unauthorised is skipped on purpose; it already goes to FRAUD_TEAM |
+| Training (one label each) | 1,750 | 0 | No false flags |
+| Test set (current predictions) | 750 | 0 | `predictions.csv` does not change |
+
+Two adjustments took the false flags from 46 to 0:
+
+- **"branch" and "cawangan" were dropped.** ATM locations read like "Miri Branch ATM", which caused 28 false flags.
+- **The subject line is not scanned.** Duplicate complaints use the subject "Caj berganda", which matches "caj" and caused 18 false flags.
+
+### Changes by file
+
+| File | Change | Owner |
+|---|---|---|
+| `backend/agent/second_issue.py` (new) | `find_second_issues()` with the phrase list and the overlap rules | A |
+| `backend/agent/router.py` | One call in `finalize_decision` (step 2) | A |
+| `backend/contracts.py` | Add `"second_issue"` to `HoldReason` | Shared: a small separate commit that B approves |
+| `backend/db/queries.py` | `HOLD_TEXT["second_issue"] = "Complaint raises a second issue"` | B |
+
+Nothing else changes:
+
+- `hold_reason` is a plain TEXT column, and the `/api/cases` filter reads its values from `HoldReason`.
+- Without the `HOLD_TEXT` line the UI shows no reason text, but nothing breaks.
+- The extraction prompt doesn't change, so the LLM cache stays valid and nothing is re-extracted.
+
+### Steps (about 1.5 h, merged before the 15:00 freeze)
+
+If it is not green by 14:00, drop it and use the demo answer below.
+
+- [ ] 1. B agrees to the task, including the `contracts.py` and `queries.py` lines
+- [ ] 2. A: branch `feat/a-second-issue`; add `second_issue.py` and the `router.py` call
+- [ ] 3. Shared commit on that branch: add `"second_issue"` to `HoldReason` (B approves)
+- [ ] 4. A: unit tests and a full `pytest` run
+- [ ] 5. A: regression gate (table below), all from the LLM cache at no cost
+- [ ] 6. Merge to `dev` with `--no-ff`; tick it in `STATUS.md`
+- [ ] 7. B: add the `HOLD_TEXT` line, restart the server, run `api_check`
+- [ ] 8. Both: post the 6 mixed complaints to the running API and check each lands in the right queue
+
+### Tests and the regression gate
+
+Unit tests (`backend/tests/test_second_issue.py`):
+
+- The 5 mixed texts each return the expected second category.
+- These return nothing:
+  - a scam text containing "transfer" or "failed"
+  - an unauthorised text containing "tipu"
+  - "Miri Branch ATM" in an ATM complaint
+- Router:
+  - A RM46.54 refund with a second issue becomes HUMAN_APPROVAL with `second_issue`; all scored fields are unchanged.
+  - An INVESTIGATE case stays on FRAUD_TEAM.
+  - An earlier hold reason such as `ambiguous_match` is kept.
+
+Do not merge unless every row passes:
+
+| Check | Must show |
+|---|---|
+| `pytest` | 2,334 + new, all pass |
+| Training: `runner --ids train --no-draft --db <scratch db>`, then `submit --ids train --score` | 99.94, 0 critical errors, 0 `second_issue` holds |
+| Test set regenerated into a scratch file vs `submissions/Santa_Claude/predictions.csv` | 0 rows changed |
+| `python scoring/api_check.py http://localhost:8000` | 100.0, 9/9 probes |
+| The 6 mixed complaints posted to the API | 4 `awaiting_approval` with `sent: false`, 2 `with_fraud_team` |
+
+### Risks and rollback
+
+A missed second issue behaves exactly as today, and a false flag only sends a case to an officer. No money moves either way.
+
+| Risk | Mitigation |
+|---|---|
+| A judge's wording isn't in the list ("customer service teruk", "app crash", "lama sangat tunggu") | Add phrases in step 2 only if training and test still show 0 flags |
+| A bare "app" phrase would be too broad ("transferred via the app") | Not used; only specific phrases such as "logout" |
+| Two issues in the same category (two ATM withdrawals) | Out of scope; mention it in the demo answer |
+| A late merge breaks the API before the hidden test | The regression gate must pass; drop the fix if it isn't green by 14:00 |
+
+Rollback: `git revert -m 1 <merge commit>` on `dev`, then restart the server. `predictions.csv` doesn't depend on this change.
+
+### Demo answer for the judges
+
+With the fix in place:
+
+1. The money issue is handled in code: transaction, rule and refund are shown as usual.
+2. The case waits in the officer queue with the reason "Complaint raises a second issue". It shows `awaiting_approval` with `sent: false`.
+3. The officer uses Edit & approve to acknowledge the second issue, and the self-check re-runs.
+4. If either issue is a scam or an unauthorised card, the case goes to the fraud team, who read the full text.
+
+Without the fix: "The agent picks the issue with money or fraud risk and handles it exactly. Declines, refunds over RM500 and every fraud case already go to a person who reads the full text. The gap is a small auto-resolved refund with a second, non-money issue; the planned fix holds those cases for an officer."
+
+### Not now
+
+**1. An `other_issues` field in extraction (after the hackathon).** The extractor would return something like `{"category": "FAILED_TRANSFER", "other_issues": ["FEE_DISPUTE"], ...}`. The LLM understands meaning, so it would catch any wording, not just a fixed list. It is not worth the risk before the freeze:
+
+- **Cache reset.** The cache key is a hash of the prompt, so a prompt change re-extracts all 2,500 complaints: about RM3–4 and 20–30 min.
+- **Score risk.** A changed prompt can shift some main categories, amounts or dates, which can change the matched transaction or refund. That means re-scoring training, regenerating `predictions.csv`, redrafting changed replies and re-measuring everything in `EXTRACTOR_RESULTS.md` before 15:00.
+- **Files touched.** It touches `prompts.py` (prompt and schema), all 12 `fewshot.json` examples, and the `Clues` model in `contracts.py`, which forbids unknown fields.
+
+**2. The reply mentions the second issue (optional, B, only if time is left after the fix).** In `build_draft_messages`, when `find_second_issues()` finds something, add a fact such as `ALSO RAISED: the fee charge. Say in one sentence it has been passed to the team concerned; promise nothing.` Only flagged complaints change their draft request. None of the 750 are flagged, so the cache holds and nothing is redrafted.
+
+| Option | Catches | Score risk | Time | When |
+|---|---|---|---|---|
+| Phrase-list check (this plan) | Common wording | None | About 1.5 h | Before 15:00 |
+| + reply mentions the second issue | Same cases, better reply | None | About 30 min | Before 15:00, if there's time |
+| LLM `other_issues` field | Any wording | Yes | About half a day | After the hackathon |
 
 ---
 
