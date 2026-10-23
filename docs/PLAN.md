@@ -84,9 +84,9 @@ Refunds and customer messages are **simulated**: the backend enforces the approv
 
 ---
 
-## Team Split (core, 2 developers)
+## Team Split (2 backend developers + 1 UI developer)
 
-Split by module so each developer owns separate files. **Dev A** owns the decision engine (code that does money and rules). **Dev B** owns the platform (LLM, DB, API, workflow).
+Split by module so each developer owns separate files. **Dev A** owns the decision engine (code that does money and rules). **Dev B** owns the platform (LLM, DB, API, workflow). **Dev C** owns the React UI. Dev C joined after the backend split was set (coverage-check gap 1: the README asks for teams of 3–5, and the plan had only two roles).
 
 ### Step 0 — together, first ~45 min, one PR
 
@@ -102,11 +102,11 @@ After Step 0 merges, A and B work independently and integrate through PRs at the
 
 ### Ownership
 
-| | Dev A — decision engine | Dev B — platform and LLM |
-|---|---|---|
-| Owns | `agent/tools.py`, `date_resolver.py`, `transaction_matcher.py`, `categories/*`, `router.py` (route, priority, language, hold, SLA), `self_check.py`, `eval/` | `llm/*` (interface, adapters, prompts, cache, cost), `agent/parser.py`, `reply_generator.py`, `pipeline.py`, `db/`, `api/` (the [api.md](api.md) contract first; bonus `/api/*` routes and `auth/` later), `batch/` (runner, export, validation), serving the API on the venue network |
-| Order | 1. Tools + date resolver<br>2. ATM handler (sets the pattern)<br>3. Unauthorised card, scam<br>4. Failed transfer, duplicate<br>5. Fee<br>6. Service quality<br>7. Self-check + routing/hold | 1. LLM interface + first adapter + extraction prompt<br>2. Pipeline + DB persistence<br>3. Reply drafting + redraft loop<br>4. Batch runner + export<br>5. **Contract API** (`/complaints`, `/cases/{id}`, `/cases/{id}/actions`, `/health`) passing `api_check.py`<br>6. Reachability (host `0.0.0.0` or tunnel) + messy-text prompt hardening<br>7. Bonus routes, auth, second adapter |
-| Tests | Each handler scored on `labels_train.csv` without LLM calls; boundary tests (RM500, 10 min, birthdays, fee anniversaries) | `scoring/api_check.py` (contract, scores, robustness and human-in-the-loop probes); gate tests (send without approval, edited reply with invented amount → 422, 409 when not awaiting approval, repeat intake, double click); export validation |
+| | Dev A — decision engine | Dev B — platform and LLM | Dev C — UI |
+|---|---|---|---|
+| Owns | `agent/tools.py`, `date_resolver.py`, `transaction_matcher.py`, `categories/*`, `router.py` (route, priority, language, hold, SLA), `self_check.py`, `eval/` | `llm/*` (interface, adapters, prompts, cache, cost), `agent/parser.py`, `reply_generator.py`, `pipeline.py`, `db/`, `api/` (the [api.md](api.md) contract first; bonus `/api/*` routes and `auth/` later), `batch/` (runner, export, validation), serving the API on the venue network | `frontend/` (React + TypeScript). Builds only against [UI_API.md](UI_API.md); missing backend fields go to Dev B instead of being worked around |
+| Order | 1. Tools + date resolver<br>2. ATM handler (sets the pattern)<br>3. Unauthorised card, scam<br>4. Failed transfer, duplicate<br>5. Fee<br>6. Service quality<br>7. Self-check + routing/hold | 1. LLM interface + first adapter + extraction prompt<br>2. Pipeline + DB persistence<br>3. Reply drafting + redraft loop<br>4. Batch runner + export<br>5. **Contract API** (`/complaints`, `/cases/{id}`, `/cases/{id}/actions`, `/health`) passing `api_check.py`<br>6. Reachability (host `0.0.0.0` or tunnel) + messy-text prompt hardening<br>7. Bonus routes, auth, second adapter | 1. **Core UI first** (coverage-check gap 3): queues, case page with evidence and self-check, Approve / Edit & approve / Reject, fraud Acknowledge, dashboard, audit log<br>2. Login page + role screens: Officer Resolution Desk, Fraud Investigation Workbench, Manager Console<br>3. Charts and extras if time allows |
+| Tests | Each handler scored on `labels_train.csv` without LLM calls; boundary tests (RM500, 10 min, birthdays, fee anniversaries) | `scoring/api_check.py` (contract, scores, robustness and human-in-the-loop probes); gate tests (send without approval, edited reply with invented amount → 422, 409 when not awaiting approval, repeat intake, double click); export validation | The human-gate checklist through the UI: a posted complaint appears on its own, approval holds until clicked, fraud lands in the fraud queue, the self-check refusal is visible; the three bonus demo flows |
 
 **Shared files** (`contracts.py`, `config.py`, `requirements.txt`) change only in a dedicated PR the other developer approves.
 
@@ -121,7 +121,7 @@ A carries the most points (matching = 75 of 100). After Checkpoint 2, B helps A 
 | Day 1 evening | Full pipeline with draft + self-check; first 750 test run | Both |
 | **Day 2 12:00 — Checkpoint 2** | Approval + write-back via the contract API on 50 training complaints; score posted; `api_check.py` passes; API reachable from another laptop | B: contract API. A: self-check on edits |
 | Day 2 12:00–15:00 | Accuracy and messy-text robustness; final 750 export; **15:00 freeze** of agent + API | Both |
-| Day 2 15:00–16:30 | Simple case/queue UI calling the same API, then bonus screens | Both, split by role screen |
+| Day 2 15:00–16:30 | Simple case/queue UI calling the same API, then bonus screens | Dev C, with Dev B on backend fixes |
 
 Until Checkpoint 2 the core can be demoed through FastAPI `/docs`. The UI can keep changing after 15:00; the agent and API cannot.
 
