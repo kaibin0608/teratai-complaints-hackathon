@@ -35,7 +35,7 @@ export function ApprovalSection({ policy }: { policy: Policy }) {
       title="Approval and escalation"
       description="Who may decide a case, and when it must go to the manager. The backend enforces these; the screens only show them."
     >
-      <Card title="Approval limits">
+      <div>
         {users.status === 'loading' && <StatusMessage busy icon={LoaderCircle} title="Loading…" />}
         {users.status === 'error' && (
           <StatusMessage icon={CircleAlert} title="Could not load the approval limits">
@@ -45,7 +45,7 @@ export function ApprovalSection({ policy }: { policy: Policy }) {
         {users.status === 'success' && (
           <PolicyTable columns={USER_COLUMNS} rows={users.data} rowKey={(user) => user.username} />
         )}
-      </Card>
+      </div>
 
       <Card title="The rules">
         <ul className="flex list-disc flex-col gap-2 pl-5 text-sm text-body">

@@ -1,4 +1,3 @@
-import { Card } from '@/components/shared/Card'
 import type { PolicyParameter } from '@/lib/policy'
 import { PolicySection } from './PolicySection'
 import { PolicyTable, type Column } from './PolicyTable'
@@ -13,9 +12,7 @@ const COLUMNS: readonly Column<PolicyParameter>[] = [
 export function ThresholdsSection({ parameters }: { parameters: readonly PolicyParameter[] }) {
   return (
     <PolicySection id="thresholds" title="Limits and thresholds" description="The numbers the rules above use, and the two rules that decide who handles a case and in which language.">
-      <Card title="Policy parameters">
-        <PolicyTable columns={COLUMNS} rows={parameters} rowKey={(p) => p.key} />
-      </Card>
+      <PolicyTable columns={COLUMNS} rows={parameters} rowKey={(p) => p.key} />
     </PolicySection>
   )
 }

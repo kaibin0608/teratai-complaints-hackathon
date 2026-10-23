@@ -14,9 +14,9 @@ interface PolicyTableProps<T> {
 /** A plain read-only table inside a card: one column per `columns` entry, one row per item. */
 export function PolicyTable<T>({ columns, rows, rowKey }: PolicyTableProps<T>) {
   return (
-    <div className="overflow-x-auto rounded-control border border-subtle">
+    <div className="overflow-x-auto rounded-card border border-default bg-card">
       <table className="w-full text-sm">
-        <thead className="bg-subtle text-left text-xs text-secondary">
+        <thead className="bg-subtle text-left text-[11px] tracking-wide text-secondary uppercase">
           <tr>
             {columns.map(({ head }) => (
               <th key={head} scope="col" className="px-cell-x py-cell-y font-medium whitespace-nowrap">

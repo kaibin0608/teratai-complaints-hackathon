@@ -1,4 +1,3 @@
-import { Card } from '@/components/shared/Card'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { formatMoney } from '@/lib/format'
 import type { FeeRow, SlaRow } from '@/lib/policy'
@@ -25,15 +24,11 @@ export function FeesAndSlaSection({ fees, sla }: { fees: readonly FeeRow[]; sla:
   return (
     <>
       <PolicySection id="fees" title="Fee schedule" description="The fee that is due. A fee dispute is refunded the amount charged minus the amount due, after the waiver.">
-        <Card title="Fees">
-          <PolicyTable columns={FEE_COLUMNS} rows={fees} rowKey={(f) => f.code} />
-        </Card>
+        <PolicyTable columns={FEE_COLUMNS} rows={fees} rowKey={(f) => f.code} />
       </PolicySection>
 
       <PolicySection id="sla" title="Service levels" description="The time allowed to acknowledge a case and to resolve it. Case timers count against these.">
-        <Card title="Targets by priority">
-          <PolicyTable columns={SLA_COLUMNS} rows={sla} rowKey={(s) => s.priority} />
-        </Card>
+        <PolicyTable columns={SLA_COLUMNS} rows={sla} rowKey={(s) => s.priority} />
       </PolicySection>
     </>
   )

@@ -1,5 +1,5 @@
 import { Card } from '@/components/shared/Card'
-import { CategoryBadge } from '@/components/shared/CategoryBadge'
+import { CategoryTag } from '@/components/shared/CategoryTag'
 import { DetailList } from '@/components/shared/DetailList'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import type { CategoryRule } from '@/lib/policy'
@@ -17,7 +17,7 @@ export function RulesSection({ rules }: { rules: readonly CategoryRule[] }) {
         {rules.map((rule) => (
           <Card
             key={rule.category}
-            title={<CategoryBadge category={rule.category} />}
+            title={<CategoryTag category={rule.category} />}
             aside={
               <span className="flex items-center gap-1.5 text-xs text-secondary">
                 Base priority <PriorityBadge priority={rule.basePriority} />
