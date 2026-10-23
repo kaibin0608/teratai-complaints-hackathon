@@ -46,9 +46,7 @@ function CaseRow({ item }: { item: CaseListItem }) {
   const open = (item.queue === 'awaiting_approval' || item.queue === 'with_fraud_team') && item.workflow !== 'closed'
   return (
     <tr onClick={() => navigate(paths.case(item.complaint_id))} className="cursor-pointer align-top transition-colors focus-within:bg-subtle hover:bg-subtle">
-      <td className={`px-cell-x py-cell-y ${item.priority === 'P1' ? 'shadow-[inset_3px_0_0_0_var(--color-error-600)]' : ''}`}>
-        {item.priority && <PriorityBadge priority={item.priority} />}
-      </td>
+      <td className="px-cell-x py-cell-y">{item.priority && <PriorityBadge priority={item.priority} />}</td>
       <td className="px-cell-x py-cell-y whitespace-nowrap">
         <Link to={paths.case(item.complaint_id)} className="font-medium text-primary hover:text-link">
           {item.complaint_id}
