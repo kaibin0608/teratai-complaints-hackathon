@@ -131,9 +131,9 @@ function Column({ day, x, width, top, height }: { day: Day; x: number; width: nu
     <g>
       {segments.map((segment, position) =>
         position === last ? (
-          <path key={segment.category} d={columnPath(x, segment.y, width, segment.h)} className={`${SEGMENT_FILLS[segment.index]} stroke-white`} strokeWidth={1} />
+          <path key={segment.category} d={columnPath(x, segment.y, width, segment.h)} className={`${SEGMENT_FILLS[segment.index]} stroke-neutral-0`} strokeWidth={1} />
         ) : (
-          <rect key={segment.category} x={x} y={segment.y} width={width} height={segment.h} className={`${SEGMENT_FILLS[segment.index]} stroke-white`} strokeWidth={1} />
+          <rect key={segment.category} x={x} y={segment.y} width={width} height={segment.h} className={`${SEGMENT_FILLS[segment.index]} stroke-neutral-0`} strokeWidth={1} />
         ),
       )}
     </g>

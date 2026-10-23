@@ -92,7 +92,7 @@ export function QueueFilters({ params, workflowCounts, showChanged, onChange, on
         >
           <ListFilter size={14} aria-hidden />
           More filters
-          {hidden > 0 && <span className="rounded-badge bg-brand-600 px-1.5 text-[11px] text-white tabular-nums">{hidden}</span>}
+          {hidden > 0 && <span className="rounded-badge bg-brand-600 px-1.5 text-[11px] text-inverse tabular-nums">{hidden}</span>}
         </button>
 
         {active > 0 && (

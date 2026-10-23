@@ -57,7 +57,7 @@ export function NotificationBell({ itemClass }: { itemClass: string }) {
           {unread > 0 && <span aria-hidden className="absolute -top-1 -right-1 size-2 rounded-full bg-brand-600 ring-2 ring-[var(--background-color-page)]" />}
         </span>
         <span className="hidden xl:inline">Notifications</span>
-        {unread > 0 && <span className="ml-auto hidden rounded-badge bg-brand-600 px-1.5 text-[11px] font-medium text-white tabular-nums xl:inline">{unread}</span>}
+        {unread > 0 && <span className="ml-auto hidden rounded-badge bg-brand-600 px-1.5 text-[11px] font-medium text-inverse tabular-nums xl:inline">{unread}</span>}
       </button>
 
       {open && (
