@@ -2,244 +2,175 @@
 
 How complaints and people move through the system, from intake to the customer. Reference for the frontend screens.
 
-**Source of truth:** [PLAN.md](PLAN.md) and [backend/contracts.py](../backend/contracts.py). Where this file disagrees with them, they win; fix this file. Briefs: [README.md](../README.md), [bonus_platform.md](bonus_platform.md).
+**Source of truth:** [api.md](api.md) (the organisers' contract), [UI_API.md](UI_API.md) (the UI's backend API: fields, actions, errors) and [PLAN.md](PLAN.md). Where this file disagrees with them, they win; fix this file. Briefs: [README.md](../README.md), [bonus_platform.md](bonus_platform.md).
 
 ---
 
 ## 0. The whole flow at a glance
 
 ```
-Complaint in  (POST /api/intake, or a CSV dropped in inbox/)
+POST /complaints  (judges' live round, api_check.py, or a rehearsal)
      │
      ▼
 Agent: extract (LLM) → match + decide (code) → draft (LLM) → self-check (code) → route/hold (code)
+     │                                                         (queue: processing, then ↓)
+     ├─ AUTO_RESOLVE ─────────► queue auto_resolved · reply sent automatically (simulated outbox)
      │
-     ├─ AUTO_RESOLVE ──────────────► self-check pass → simulated send (authorised_by "auto") → sent → closed
+     ├─ HUMAN_APPROVAL ───────► queue awaiting_approval · nothing sent yet
+     │     ├─ officer approves (within limit, not sensitive) ─► approved · sent
+     │     ├─ officer rejects ───────────────────────────────► rejected · nothing sent
+     │     └─ over limit or sensitive ─► escalate ─► Manager: second-tier approve / reject
      │
-     ├─ HUMAN_APPROVAL → Officer
-     │     ├─ within limit, not sensitive ──► approve → sent
-     │     └─ over limit or sensitive ──────► escalate → Manager → second-tier approve/reject
-     │
-     └─ FRAUD_TEAM → Fraud analyst
-           ├─ acknowledge (releases holding reply) → investigate → record outcome → closed
-           └─ high value or sensitive ─────► escalate → Manager
+     └─ FRAUD_TEAM ───────────► queue with_fraud_team · nothing sent yet
+           ├─ analyst acknowledges ─► holding reply sent · workflow investigating
+           ├─ investigate (any number of times) → record outcome ─► workflow closed
+           └─ disputed amount over limit or sensitive ─► escalate ─► Manager decides
 ```
 
 - The agent never routes to the manager. Only a first-tier user escalates.
-- **Holds only push toward humans.** Any `hold_reason` on a non-INVESTIGATE case changes `route` to `HUMAN_APPROVAL`, with the reason shown in the queue. INVESTIGATE always stays `FRAUD_TEAM`. `decision.policy_route` keeps the route before the hold.
-- Refunds and messages are **simulated**. The backend enforces the gate and writes an outbound record, and the UI labels it "Simulated".
+- **Holds only push toward humans:** a `hold_reason` moves a non-fraud case to `HUMAN_APPROVAL`; fraud stays `FRAUD_TEAM`. `decision.policy_route` keeps the route before the hold.
+- Refunds and messages are **simulated**: an outbox record, labelled "Simulated" in the UI.
+- The agent's own decision never changes (`autonomous`); what people did is stored next to it (`final`, `differs`).
 
 ---
 
 ## 1. Actors
 
-| Actor | Sees | Can do | Approval limit |
-|---|---|---|---|
-| **Agent pipeline** | Every complaint | Produces one immutable run per execution | n/a |
-| **Complaints Officer** (`officer1`) | `HUMAN_APPROVAL` queue | Approve / edit reply then approve / reject / send back / escalate / flag sensitive | RM 5,000, measured on the **refund amount** |
-| **Fraud Analyst** (`fraud1`) | `FRAUD_TEAM` queue | Acknowledge / log investigation or recall / record outcome / escalate / flag sensitive | RM 5,000, measured on the **disputed transaction amount** |
-| **Manager** (`manager1`) | Both queues, escalation queue, all cases (AUTO_RESOLVE read-only), audit log, metrics | Everything the first tier can do, plus second-tier approve/reject and reassign | No limit |
+| User | Name | Role | Sees | Approval limit |
+|---|---|---|---|---|
+| `officer1` | Aina Rahman | officer | approval cases | RM2,000, on the **refund** |
+| `officer2` | Daniel Lim | officer | approval cases | RM2,000 |
+| `fraud1` | Farid Hassan | fraud | fraud cases | RM5,000, on the **disputed transaction** |
+| `manager1` | Mei Ling Tan | manager | everything, plus metrics, audit and users | none |
 
-**Sensitive** forces escalation regardless of amount. A case is sensitive when the customer is vulnerable (65+ on `received_at`, from `decision.vulnerable`), or when a first-tier user flags it with a reason (`POST /flag-sensitive`).
+All demo users use the password `teratai123`.
 
-Role checks are enforced **in the backend** on every case and action endpoint. Hiding links in the UI is not enough.
-
----
-
-## 2. Flow A: Intake and agent processing (system)
-
-**Triggers:**
-1. `POST /api/intake`: one complaint row (same fields as the live round) or a CSV
-2. A CSV dropped into the watched folder `inbox/`: same intake path
-3. The Intake screen: a form, or paste one CSV row. It calls `POST /api/intake`
-
-```
-complaint_id,customer_id,received_at,channel,subject,text
-LIVE-07,CUS-01234,2026-09-30 10:15,App chat,,"Hi, I was charged twice at ShopLah Online today for RM89.90..."
-```
-
-`received_at` is accepted as `YYYY-MM-DD HH:MM[:SS]`, `DD-MM-YYYY HH:MM[:SS]` or `DD/MM/YYYY HH:MM[:SS]`, in Malaysia time.
-
-**Intake rules:**
-
-| Situation | Result |
-|---|---|
-| New complaint | Case persisted first (`processing`), pipeline runs in the background, response returns the case ID for polling |
-| Same complaint ID, identical content | Returns the existing case (no duplicate) |
-| Same complaint ID, different content | Rejected |
-| Unknown `customer_id` | Accepted and stored, never dropped: no transaction lookup, held `customer_not_found` (HUMAN_APPROVAL, or FRAUD_TEAM if INVESTIGATE) |
-| Pipeline or delivery failure | Visible `failed` state, with retry |
-
-**Pipeline steps** (`backend/agent/pipeline.py`):
-
-| # | Step | By | Stored on the run |
-|---|---|---|---|
-| 1 | Extract | LLM | `clues`, `extract_usage` |
-| 2 | Match and decide | Code (category handler) | `match` (status, candidates, final category), `decision` (outcome, refund, priority, language, route, `rule_id`, `calculation`, hold, SLA), `evidence` |
-| 3 | Draft | LLM | `reply_text`, `draft_usage[]` |
-| 4 | Self-check | Code | `self_check`; on fail, one redraft (`redraft_count`), then hold `self_check_failed` |
-| 5 | Route and store | Code | Case moves to its queue |
-
-**Where the case ends up:**
-
-| Decision | Status | Queue | Customer receives |
-|---|---|---|---|
-| AUTO_RESOLVE, self-check pass | `sent` → `closed` | none (manager sees it read-only) | Reply, simulated, `authorised_by = auto` |
-| HUMAN_APPROVAL (DECLINE, refund > RM 500, or any hold) | `pending` | Officer | Nothing yet |
-| FRAUD_TEAM (INVESTIGATE) | `pending` | Fraud analyst | Nothing until acknowledged |
-| Pipeline error | `failed` | visible to the manager, with retry | Nothing |
-
-**Hold reasons** (`HoldReason`), shown as the queue reason:
-
-| `hold_reason` | Queue label |
-|---|---|
-| `customer_not_found` | Unknown customer |
-| `ambiguous_match` | Ambiguous match |
-| `no_match` | No matching transaction |
-| `category_revised` | Category revised |
-| `self_check_failed` | Self-check failed |
-| `unknown_auth_method` | Unknown auth method |
-| `llm_error` | LLM error |
-
-**SLA:** `ack_due_at = received_at + acknowledge hours`; `resolve_due_at = received_at + resolve business days` (Mon–Fri, no holidays). Targets: P1 2 h / 3 days, P2 24 h / 7 days, P3 48 h / 14 days. The UI measures against a **labelled demo clock (2026-09-30)** so historical data isn't all overdue.
+- **Sensitive** forces escalation regardless of amount: the customer is 65+ (always), or someone flagged it (`flag-sensitive`, with a reason).
+- Auto-resolved, processing and error cases belong to no team: only the manager sees them.
+- Role checks run **in the backend**. Another team's case returns 404; metrics, audit and users return 403 for first-tier users. The UI only hides.
 
 ---
 
-## 3. Flow B: Live round
+## 2. The case model (UI_API.md)
 
-1. The judge gives 2–3 complaints. Paste one into the Intake form or drop the CSV into `inbox/`.
-2. The intake returns the case ID, and the UI polls it: `processing` → final status.
-3. Open the case: evidence, calculation, route, checked reply.
-4. HUMAN_APPROVAL cases wait in the officer queue; FRAUD_TEAM cases wait in the fraud queue.
-5. Show the self-check blocking an edited reply with an invented amount.
+A case has three independent facts. Show all three.
 
----
-
-## 4. Flow C: Complaints Officer (HUMAN_APPROVAL)
-
-**Queue:** sorted by priority, then SLA due. Each row shows why it is waiting: "Refund > RM500", "Decline needs approval", "Ambiguous match", "Self-check failed", or another hold label.
-
-**Case view leads with:** the drafted `reply_text` (editable), the decision, the refund and calculation, an evidence panel (matched transaction, other candidates, verification status), the self-check badge, and the approval headroom ("Your limit: RM5,000. This refund: RM550. ✓").
-
-| Action | Endpoint | Rules |
+| Field | Values | Meaning |
 |---|---|---|
-| **Approve** | `POST /approve` | Blocked if the refund is over the officer's limit or the case is sensitive (must escalate). Requires the current reply's self-check = pass. Status → `approved`, then the gated send → `sent` |
-| **Edit reply** | `POST /edit-reply` | **Re-runs the self-check**, logs the diff, and **clears any prior approval** |
-| **Reject** | `POST /reject` | Reason required. The officer sets the final outcome and a reply that must pass the self-check before anything is sent |
-| **Send back** | `POST /send-back` | Creates a new `reprocess` run; the autonomous run is untouched. Status `sent_back` → `processing` → back to a queue |
-| **Escalate** | `POST /escalate` | Reason required. Status → `escalated`; the case waits for the manager. Over limit or sensitive: Approve is replaced by **"Escalate to Manager"** |
-| **Flag sensitive** | `POST /flag-sensitive` | Reason required. Forces escalation |
+| `status` | `processing`, `done`, `error` | Is the agent finished? |
+| `queue` | `processing`, `error`, `auto_resolved`, `awaiting_approval`, `with_fraud_team`, `approved`, `rejected` | Where the case is (the contract's `case_state`, plus processing/error). Drives the queue tabs |
+| `workflow` | `null`, `escalated`, `reprocessing`, `investigating`, `closed` | Ops-platform state on top of the queue |
+| `sent` | `true` / `false` | Has a reply reached the customer (outbox)? |
 
-After an action: auto-advance to the next case. Delivery is shown from the outbound record, labelled "Simulated".
-
----
-
-## 5. Flow D: Fraud Analyst (FRAUD_TEAM)
-
-Long-lived cases. The customer gets only the holding reply, and only after acknowledgement.
-
-**Workbench leads with:** the suspicious transaction and its `auth_method` (3DS-OTP / Chip+PIN / None: the deciding fact), related transactions on the same account, and the case timeline.
-
-| Step | Endpoint | Effect |
+| `queue` | `sent` | Who acts |
 |---|---|---|
-| 1. **Acknowledge** | `POST /acknowledge` | **Releases the holding reply** to outbound. Status → `investigating` |
-| 2. **Log investigation / recall** | `POST /investigate` | Appends to the timeline |
-| 3. **Record outcome** | `POST /record-outcome` | Confirmed fraud / not fraud / recall succeeded / recall failed. Status → `closed` |
-| **Escalate** | `POST /escalate` | Sensitive or high-value (disputed amount over the analyst's limit) → manager |
+| `auto_resolved` | true | nobody (manager sees it for audit) |
+| `awaiting_approval` | false | officer |
+| `with_fraud_team` | false, then true after acknowledge (holding reply) | fraud analyst |
+| `approved` | true | done |
+| `rejected` | false | done; the officer handles the case outside the agent |
+
+`waiting_reason` (from the backend) is the queue row's "why it's waiting" line: "Refund over RM500", "Decline needs approval", "Ambiguous match", "Fraud investigation", "Escalated to the manager", "Agent is working on it". It is `null` for closed cases.
 
 ---
 
-## 6. Flow E: Manager
+## 3. Flow A: a complaint arrives (system)
 
-- **Metrics tiles** (`GET /api/metrics`): throughput, auto-resolve rate, SLA compliance, override rate, self-check catches, cost and latency per complaint.
-- **Escalation queue:** merged from both teams. Shows what the first tier did and why it was escalated. **Second-tier approve / reject** with a reason (`POST /second-tier-approve`, `/second-tier-reject`).
-- **All cases table:** filter by queue, category, priority, status and officer; **reassign** (`POST /reassign`). AUTO_RESOLVE cases are read-only.
-- **Audit log** (`GET /api/audit`): append-only, expandable rows, diffs for edits, export.
-- **Agent vs human:** the autonomous run beside the final action for every overridden case.
+1. `POST /complaints` with the six fields of a `complaints.csv` row. Any client: the organisers' laptop, `api_check.py`, a rehearsal script, or the optional intake form.
+2. The case appears at once with `queue: processing`, and moves to its queue a few seconds later.
+3. **The UI must show it on its own:** poll the list every 3–5 s (`sort=recent` puts new cases first), and poll a case page every 2 s while it is `processing` or `reprocessing`.
 
----
-
-## 7. The gated send
-
-Every human-gated send goes through one backend function that checks:
-1. the right role
-2. approved, and second-tier approved if the case was escalated
-3. the current reply passed the self-check
-4. not already sent
-
-It protects against double clicks and retries. The UI disables buttons while a request is in flight and never sends from the client.
+Intake rules are the backend's: the same complaint posted twice returns the existing case; an unknown customer is accepted and held (`customer_not_found`); a failed run shows `status: error` with the reason.
 
 ---
 
-## 8. Case status reference (`cases.status`)
+## 4. Flow B: the live round (README)
 
-| Status | Meaning | Customer has received |
+**Hidden test (15 points, no UI):** at 15:00 the organisers' script posts 20 messy complaints to our API and scores the answers.
+
+**Human gate (10 points, through the UI)**: in the demo, judges post 3 complaints one at a time and tick, for each:
+- the case **appears on its own**
+- the right transaction, decision and refund
+- the right route
+- a case needing approval **waits until someone approves it** in the UI (and the API shows `awaiting_approval`, `sent: false` until then)
+- a fraud case lands in the **fraud queue**
+- the reply is in the right language and matches the decision
+- the **self-check result is visible**
+
+---
+
+## 5. Flow C: complaints officer (`awaiting_approval`)
+
+**Queue:** approval cases, priority first, then the earliest due date. Each row shows `waiting_reason`.
+
+**Case page leads with** the reply (editable, with the self-check badge), then the decision, refund and calculation, then the evidence. The approval headroom is shown: "Your limit: RM2,000. This refund: RM550. ✓".
+
+| Button | Action (`POST /api/cases/{id}/<action>`) | Rule |
 |---|---|---|
-| `processing` | Pipeline running (new intake or after send-back) | Nothing |
-| `failed` | Pipeline or delivery failed; retry available | Nothing |
-| `pending` | Waiting in the officer or fraud queue | Nothing |
-| `escalated` | Waiting for the manager | Nothing (fraud: holding reply if already acknowledged) |
-| `approved` | Approved, waiting for the gated send | Nothing |
-| `rejected` | Rejected; final outcome and reply set by the officer | Nothing until the reply passes the self-check and is sent |
-| `sent_back` | Returned to the agent for a reprocess run | Nothing |
-| `investigating` | Fraud case acknowledged | Holding reply |
-| `sent` | Resolution sent (simulated) | Final reply |
-| `closed` | Done (auto-resolved after send, or fraud outcome recorded) | Final reply / holding reply + outcome |
+| **Approve** | `approve` `{reason?}` | Sends the reply (the edited draft if any) and the refund. Not allowed over the limit or when sensitive: show **Escalate to manager** instead. Locked while an edited draft is flagged |
+| **Edit reply** | `edit-reply` `{reply_text, reason}` | Saves `draft_reply` with its self-check result, even when it fails. Show the problems next to the text |
+| **Reject** | `reject` `{reason}` | Rejected; nothing is sent |
+| **Send back** | `send-back` `{note}` | **202**; the agent re-runs with the note (`workflow: reprocessing`). Poll until `workflow` is null; the case gets a second run and always waits for a person |
+| **Escalate** | `escalate` `{reason}` | `workflow: escalated`; waits for the manager |
+| **Flag sensitive** | `flag-sensitive` `{reason}` | The case now needs the manager |
+
+After an action, redraw the page from the returned case detail.
+
+---
+
+## 6. Flow D: fraud analyst (`with_fraud_team`)
+
+**Workbench leads with** the suspicious transaction and its `auth_method` (3DS-OTP / Chip+PIN / None), related transactions, and the timeline from `events`. The customer gets only the holding reply.
+
+| Step | Action | Effect |
+|---|---|---|
+| 1. **Acknowledge** | `acknowledge` `{reason?}` | Sends the holding reply; `workflow: investigating` |
+| 2. **Log** | `investigate` `{note, kind}` (`investigation` or `recall_attempt`) | Adds a timeline entry; any number of times |
+| 3. **Record outcome** | `record-outcome` `{outcome, reason}` | `confirmed_fraud` / `not_fraud` / `recall_succeeded` / `recall_failed`; `workflow: closed`; no message to the customer |
+| **Escalate** | `escalate` `{reason, outcome}` | When the disputed transaction is over RM5,000 or the case is sensitive; the manager approves the proposed outcome |
+
+---
+
+## 7. Flow E: manager
+
+- **Escalation queue** (`workflow=escalated`, both teams). Each case carries `escalation`: who, when, why, and the proposal (the reply to send, or the fraud outcome). **Second-tier approve / reject** with a reason. A fraud reject returns the case to investigating.
+- **All cases**, with **reassign** (`reassign` `{username, reason?}`; users from `GET /api/users`). Once assigned, only that person or the manager can act.
+- **Dashboard** (`GET /api/metrics?as_of=<demo clock>`): auto-resolve rate, open/overdue/due-soon, self-check catches, override rate, cost and latency per complaint, SLA compliance, turnaround, refunds, charts.
+- **Audit log** (`GET /api/audit`): who did what, filterable by actor, action and dates.
+- **Agent vs human** (`overridden=true`): `autonomous` beside `final`, with `differs`.
+
+---
+
+## 8. State diagram
 
 ```mermaid
 stateDiagram-v2
-    [*] --> processing: intake
-    processing --> failed: error
-    failed --> processing: retry
-    processing --> sent: AUTO_RESOLVE + self-check pass
-    sent --> closed
-    processing --> pending: HUMAN_APPROVAL / FRAUD_TEAM / hold
-    pending --> approved: approve (within limit, not sensitive, check pass)
-    pending --> escalated: escalate
-    pending --> rejected: reject
-    pending --> sent_back: send back
-    sent_back --> processing: reprocess run
-    escalated --> approved: second-tier approve
-    escalated --> rejected: second-tier reject
-    approved --> sent: gated send
-    rejected --> sent: final reply passes self-check
-    pending --> investigating: acknowledge (holding reply)
-    investigating --> escalated: escalate
-    investigating --> closed: record outcome
+    [*] --> processing: POST /complaints
+    processing --> error: agent failed
+    processing --> auto_resolved: AUTO_RESOLVE (sent)
+    processing --> awaiting_approval: HUMAN_APPROVAL
+    processing --> with_fraud_team: FRAUD_TEAM
+    awaiting_approval --> approved: approve / second-tier approve (sent)
+    awaiting_approval --> rejected: reject / second-tier reject
+    awaiting_approval --> awaiting_approval: edit-reply · escalate (workflow escalated) · send-back (workflow reprocessing)
+    with_fraud_team --> with_fraud_team: acknowledge (holding reply, workflow investigating) · investigate · escalate
+    with_fraud_team --> [*]: record outcome (workflow closed)
 ```
 
 ---
 
-## 9. Audit actions (`case_events.action`)
+## 9. Without logging in (core contract)
 
-`ingest`, `agent_run`, `approve`, `edit`, `reject`, `send_back`, `escalate`, `reassign`, `acknowledge`, `investigate`, `record_outcome`, `second_tier_approve`, `second_tier_reject`, `send`.
-
-A reason is required on every action that changes the agent's decision. Edits store old → new and the self-check result.
+The organisers' contract routes ([api.md](api.md)) need no login: `POST /cases/{id}/actions` (`approve`, `edit_approve`, `reject`, with a typed `actor`) and `POST /cases/{id}/acknowledge`. They refuse (409) a case that is escalated, re-running or closed on the platform, so the two-tier rule can't be bypassed. Our UI signs in and uses the platform actions above; the contract routes remain the judges' and `api_check.py`'s path.
 
 ---
 
-## 10. Integrity
+## 10. Demo flows (PLAN.md, bonus)
 
-- `agent_runs` rows never change. Human actions change `cases` and append `case_events`.
-- `predictions.csv` is exported from `cases.autonomous_run_id` only: never from human-corrected fields or reprocess runs.
-- The gap between the autonomous run and the final action is shown to the manager.
+1. **Within the limit:** an officer approves a refund under RM2,000 (or edits it, triggering the self-check) → sent (simulated).
+2. **Over the limit:** a refund over RM2,000 → the officer sees "Escalate to manager" → the manager second-tier approves → sent.
+3. **Fraud:** the analyst acknowledges (holding reply sent) → logs an investigation or recall attempt → records the outcome.
 
----
+Then show the audit log, agent vs human, and an edited reply with an invented amount being refused.
 
-## 11. Demo script (PLAN.md)
-
-1. **Show the system (1 min):** architecture (LLM does language, code does money), three role logins.
-2. **Live round (3 min):** paste a judge's CSV row (or drop it in `inbox/`), watch it process, and show the case in the right queue with evidence, calculation and checked reply.
-3. **Three cases end to end (3 min):**
-   - **A:** HUMAN_APPROVAL refund RM550 (within the RM5,000 limit) → officer approves → "sent (simulated)"
-   - **B:** HUMAN_APPROVAL refund over the limit → officer escalates → manager second-tier approves → "sent (simulated)"
-   - **C:** FRAUD_TEAM → analyst acknowledges (holding reply released) → logs investigation → customer sees only the holding reply
-4. **Observability (1 min):** audit log with edit diffs, agent-vs-human gap, self-check blocking an invented amount, metrics (override rate, cost and latency).
-
-> **Data note for Case B:** PLAN.md uses a RM6,000 refund, but the largest refund in `labels_train.csv` is RM4,687.10, so no real case exceeds RM5,000. Raise with the team before rehearsal.
-
----
-
-## 12. Out of scope (PLAN.md)
-
-Real money movement, real customer messaging, production identity, cloud deployment, vector DBs, **policy-editing UI**.
+**Out of scope (PLAN.md):** real money movement, real customer messaging, production identity, policy editing, WebSocket push, the chatbot panel, notifications.

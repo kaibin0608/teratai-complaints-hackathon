@@ -1,0 +1,27 @@
+/* Page-wide defaults built on tokens.css. */
+@layer base {
+  :root {
+    --focus-ring: 0 0 0 2px var(--color-neutral-0), 0 0 0 4px var(--color-brand-600);
+    --overlay-scrim: rgb(26 22 28 / 0.4);
+  }
+
+  html {
+    font-family: var(--font-sans);
+    color: var(--text-color-body);
+    background-color: var(--background-color-page);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    color: var(--text-color-primary);
+  }
+
+  /* All controls: one focus ring, keyboard only. */
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+}

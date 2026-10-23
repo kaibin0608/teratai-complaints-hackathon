@@ -1,7 +1,11 @@
+import { RouterProvider } from 'react-router/dom'
+import { AuthProvider } from '@/context/AuthProvider'
+import { router } from '@/routes'
+
 export default function App() {
   return (
-    <main className="grid min-h-dvh place-items-center bg-zinc-50 text-zinc-900">
-      <h1 className="text-2xl font-semibold">Teratai Complaints Ops</h1>
-    </main>
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   )
 }
