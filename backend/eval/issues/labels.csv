@@ -1,0 +1,63 @@
+complaint_id,main_category,other_categories,kind,split,note
+ISS-00001,ATM_NOT_DISPENSED,DUPLICATE_CHARGE,two_issue,dev,
+ISS-00002,ATM_NOT_DISPENSED,FAILED_TRANSFER,two_issue,final,
+ISS-00003,ATM_NOT_DISPENSED,UNAUTHORISED_CARD,two_issue,dev,
+ISS-00004,ATM_NOT_DISPENSED,SCAM_TRANSFER,two_issue,final,
+ISS-00005,ATM_NOT_DISPENSED,,tricky_single,dev,"say they already called the hotline to report it, without complaining about the hotline"
+ISS-00006,ATM_NOT_DISPENSED,,tricky_single,final,"say they already called the hotline to report it, without complaining about the hotline"
+ISS-00007,ATM_NOT_DISPENSED,,tricky_single,dev,"say they already called the hotline to report it, without complaining about the hotline"
+ISS-00008,ATM_NOT_DISPENSED,,tricky_single,final,"say they already called the hotline to report it, without complaining about the hotline"
+ISS-00009,DUPLICATE_CHARGE,FAILED_TRANSFER,two_issue,dev,
+ISS-00010,DUPLICATE_CHARGE,ATM_NOT_DISPENSED,two_issue,final,
+ISS-00011,DUPLICATE_CHARGE,UNAUTHORISED_CARD,two_issue,dev,
+ISS-00012,DUPLICATE_CHARGE,SCAM_TRANSFER,two_issue,final,
+ISS-00013,DUPLICATE_CHARGE,,tricky_single,dev,use the Malay word 'caj' or the word 'charged' for the double charge (e.g. 'kena caj 2 kali')
+ISS-00014,DUPLICATE_CHARGE,,tricky_single,final,use the Malay word 'caj' or the word 'charged' for the double charge (e.g. 'kena caj 2 kali')
+ISS-00015,DUPLICATE_CHARGE,,tricky_single,dev,use the Malay word 'caj' or the word 'charged' for the double charge (e.g. 'kena caj 2 kali')
+ISS-00016,DUPLICATE_CHARGE,,tricky_single,final,use the Malay word 'caj' or the word 'charged' for the double charge (e.g. 'kena caj 2 kali')
+ISS-00017,FAILED_TRANSFER,DUPLICATE_CHARGE,two_issue,dev,
+ISS-00018,FAILED_TRANSFER,ATM_NOT_DISPENSED,two_issue,final,
+ISS-00019,FAILED_TRANSFER,UNAUTHORISED_CARD,two_issue,dev,
+ISS-00020,FAILED_TRANSFER,SCAM_TRANSFER,two_issue,final,
+ISS-00021,FAILED_TRANSFER,,tricky_single,dev,"say the transfer was made at an ATM or through the app, and that the money 'did not reach' the recipient"
+ISS-00022,FAILED_TRANSFER,,tricky_single,final,"say the transfer was made at an ATM or through the app, and that the money 'did not reach' the recipient"
+ISS-00023,FAILED_TRANSFER,,tricky_single,dev,"say the transfer was made at an ATM or through the app, and that the money 'did not reach' the recipient"
+ISS-00024,FAILED_TRANSFER,,tricky_single,final,"say the transfer was made at an ATM or through the app, and that the money 'did not reach' the recipient"
+ISS-00025,FEE_DISPUTE,DUPLICATE_CHARGE,two_issue,dev,
+ISS-00026,FEE_DISPUTE,FAILED_TRANSFER,two_issue,final,
+ISS-00027,FEE_DISPUTE,ATM_NOT_DISPENSED,two_issue,dev,
+ISS-00028,FEE_DISPUTE,UNAUTHORISED_CARD,two_issue,final,
+ISS-00029,FEE_DISPUTE,,tricky_single,dev,"call the debit card a 'kad ATM' (as Malaysians do), e.g. 'caj tahunan kad ATM'"
+ISS-00030,FEE_DISPUTE,,tricky_single,final,"call the debit card a 'kad ATM' (as Malaysians do), e.g. 'caj tahunan kad ATM'"
+ISS-00031,FEE_DISPUTE,,tricky_single,dev,"call the debit card a 'kad ATM' (as Malaysians do), e.g. 'caj tahunan kad ATM'"
+ISS-00032,FEE_DISPUTE,,tricky_single,final,"call the debit card a 'kad ATM' (as Malaysians do), e.g. 'caj tahunan kad ATM'"
+ISS-00033,SCAM_TRANSFER,DUPLICATE_CHARGE,two_issue,dev,
+ISS-00034,SCAM_TRANSFER,ATM_NOT_DISPENSED,two_issue,final,
+ISS-00035,SCAM_TRANSFER,FEE_DISPUTE,two_issue,dev,
+ISS-00036,SCAM_TRANSFER,SERVICE_QUALITY,two_issue,final,
+ISS-00037,SCAM_TRANSFER,,tricky_single,dev,"say they transferred the money and it 'cannot be recovered', and that the scammer 'tipu'"
+ISS-00038,SCAM_TRANSFER,,tricky_single,final,"say they transferred the money and it 'cannot be recovered', and that the scammer 'tipu'"
+ISS-00039,SCAM_TRANSFER,,tricky_single,dev,"say they transferred the money and it 'cannot be recovered', and that the scammer 'tipu'"
+ISS-00040,SCAM_TRANSFER,,tricky_single,final,"say they transferred the money and it 'cannot be recovered', and that the scammer 'tipu'"
+ISS-00041,SERVICE_QUALITY,DUPLICATE_CHARGE,two_issue,dev,
+ISS-00042,SERVICE_QUALITY,FAILED_TRANSFER,two_issue,final,
+ISS-00043,SERVICE_QUALITY,ATM_NOT_DISPENSED,two_issue,dev,
+ISS-00044,SERVICE_QUALITY,UNAUTHORISED_CARD,two_issue,final,
+ISS-00045,SERVICE_QUALITY,,tricky_single,dev,"mention a card, a fee or a transfer only as background to where the bad service happened, without disputing any money"
+ISS-00046,SERVICE_QUALITY,,tricky_single,final,"mention a card, a fee or a transfer only as background to where the bad service happened, without disputing any money"
+ISS-00047,SERVICE_QUALITY,,tricky_single,dev,"mention a card, a fee or a transfer only as background to where the bad service happened, without disputing any money"
+ISS-00048,SERVICE_QUALITY,,tricky_single,final,"mention a card, a fee or a transfer only as background to where the bad service happened, without disputing any money"
+ISS-00049,UNAUTHORISED_CARD,DUPLICATE_CHARGE,two_issue,dev,
+ISS-00050,UNAUTHORISED_CARD,FAILED_TRANSFER,two_issue,final,
+ISS-00051,UNAUTHORISED_CARD,ATM_NOT_DISPENSED,two_issue,dev,
+ISS-00052,UNAUTHORISED_CARD,FEE_DISPUTE,two_issue,final,
+ISS-00053,UNAUTHORISED_CARD,,tricky_single,dev,say the card was used twice or for two payments they did not make (one problem)
+ISS-00054,UNAUTHORISED_CARD,,tricky_single,final,say the card was used twice or for two payments they did not make (one problem)
+ISS-00055,UNAUTHORISED_CARD,,tricky_single,dev,say the card was used twice or for two payments they did not make (one problem)
+ISS-00056,UNAUTHORISED_CARD,,tricky_single,final,say the card was used twice or for two payments they did not make (one problem)
+ISS-00057,FAILED_TRANSFER,FEE_DISPUTE,dev_a,dev,pastu ada caj fee pulak
+ISS-00058,DUPLICATE_CHARGE,SERVICE_QUALITY,dev_a,final,staff kurang ajar and tak nak tolong
+ISS-00059,ATM_NOT_DISPENSED,SERVICE_QUALITY,dev_a,dev,call hotline 3 kali xde org angkat
+ISS-00060,FEE_DISPUTE,SERVICE_QUALITY,dev_a,final,app korang asyik logout
+ISS-00061,UNAUTHORISED_CARD,ATM_NOT_DISPENSED,dev_a,dev,atm pun tak keluar duit
+ISS-00062,SCAM_TRANSFER,,dev_a,final,card transaction yg bukan saya buat (natural overlap with scam: must NOT be flagged; Dev A)

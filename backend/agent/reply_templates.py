@@ -4,7 +4,7 @@ Plain but correct: it states only the facts from reply_facts, and passes the sam
 """
 from __future__ import annotations
 
-from backend.agent.reply_facts import TOPIC, build_facts
+from backend.agent.reply_facts import TOPIC, also_raised, build_facts
 from backend.contracts import EngineResult
 
 DECLINE_REASON = {
@@ -23,7 +23,8 @@ GENERIC_DECLINE = {"EN": "our review found that a refund does not apply in this 
                    "MS": "semakan kami mendapati bayaran balik tidak terpakai dalam kes ini"}
 
 
-def render(result: EngineResult) -> str:
+def render(result: EngineResult, also: list[str] | tuple[str, ...] = ()) -> str:
+    """also: categories of verified second issues (backend/agent/issues.py); adds one sentence, promises nothing."""
     f = build_facts(result)
     en = f.language == "EN"
     lines = [f"Dear {f.name}," if en and f.name else "Dear Customer," if en
@@ -55,6 +56,8 @@ def render(result: EngineResult) -> str:
                     else "Kami memohon maaf atas kesulitan ini. Maklum balas anda telah direkodkan dan dimaklumkan "
                          "kepada pihak yang berkenaan untuk penambahbaikan.")
 
+    if also:
+        body.append(also_raised(f.language, also))
     body += f.advice
     if f.next_update:
         body.append(f"We will update you by {f.next_update}." if en

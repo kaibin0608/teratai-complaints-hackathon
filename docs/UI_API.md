@@ -85,7 +85,7 @@ Display dates as `DD-MM-YYYY HH:MM`, as the bank does. The raw evidence rows (`e
 | `route` | `AUTO_RESOLVE`, `HUMAN_APPROVAL`, `FRAUD_TEAM` | all |
 | `category` | `DUPLICATE_CHARGE`, `FAILED_TRANSFER`, `ATM_NOT_DISPENSED`, `UNAUTHORISED_CARD`, `SCAM_TRANSFER`, `FEE_DISPUTE`, `SERVICE_QUALITY` | all |
 | `priority` | `P1`, `P2`, `P3` | all |
-| `hold_reason` | `customer_not_found`, `ambiguous_match`, `no_match`, `category_revised`, `self_check_failed`, `unknown_auth_method`, `llm_error`, `none` (no hold) | all |
+| `hold_reason` | `customer_not_found`, `ambiguous_match`, `no_match`, `category_revised`, `self_check_failed`, `unknown_auth_method`, `llm_error`, `second_issue`, `none` (no hold) | all |
 | `q` | search text: case ID, customer ID, customer name or subject (any case) | |
 | `sort` | `priority` (P1 first, then the earliest SLA due date) or `recent` (latest activity first) | `priority` |
 | `limit`, `offset` | page size 1–500, and the start | `50`, `0` |
@@ -95,7 +95,7 @@ Display dates as `DD-MM-YYYY HH:MM`, as the bank does. The raw evidence rows (`e
 - An unknown value returns 422.
 - `counts` always covers **all** cases, whatever the filters, so the tab badges stay right.
 
-`waiting_reason` is the line to show in the queue row, saying why the case is waiting: "Refund over RM500", "Decline needs approval", "Ambiguous match", "Fraud investigation", "Fraud investigation · Customer not found", "Agent is working on it". It is `null` for closed cases.
+`waiting_reason` is the line to show in the queue row, saying why the case is waiting: "Refund over RM500", "Decline needs approval", "Ambiguous match", "Fraud investigation", "Fraud investigation · Customer not found", "Complaint raises a second issue", "Agent is working on it". It is `null` for closed cases.
 
 Example, `GET /api/cases?queue=awaiting_approval,with_fraud_team` (real output from the offline models):
 
@@ -142,6 +142,7 @@ Everything about the case, in sections. This is the "show why it decided" screen
 | `match` | `status` (`confident`, `ambiguous`, `none`, `not_applicable`) and `candidates`: each transaction considered, its score (0–1) and the reasons. The first is the chosen one |
 | `decision` | Outcome, refund, priority, route, `rule_id` (for example `ATM.SHORTFALL_REFUND`), and `calculation.explanation`, as in "1500.00 requested − 950.00 dispensed = 550.00 refund". Also `hold_reason`, SLA due dates and `vulnerable` |
 | `evidence` | The matched transaction row, related transactions (for example the earlier charge of a duplicate), reversal, ATM journal, fee schedule row, and the IDs and amounts a reply may mention |
+| `other_issues` | A **second problem** in the same complaint, if any: `[{category, quote}]`, where `quote` is the customer's own words. Such a case is held for an officer (`hold_reason: second_issue`): show the quote so the officer can deal with it too. Empty list when there's none |
 | `reply` | The agent's reply text, `redraft_count`, and `self_check` (`passed`, and the `problems` if not) |
 | `usage` | Cost (RM) and time (ms) of this complaint, models used, tokens, cache hits |
 | `runs` | Every agent run of this case (normally one) |
@@ -275,7 +276,7 @@ Real output from the offline run:
   "auto_resolve_rate": 0.25,
   "holds": {"total": 0, "by_reason": {"customer_not_found": 0, "ambiguous_match": 0, "no_match": 0,
                                       "category_revised": 0, "self_check_failed": 0, "unknown_auth_method": 0,
-                                      "llm_error": 0}},
+                                      "llm_error": 0, "second_issue": 0}},
   "self_check": {"first_draft_failed": 0, "held_self_check_failed": 0, "human_edits_refused": 1},
   "human": {"approved": 0, "rejected": 1, "edited_and_approved": 0, "acknowledged": 0, "override_rate": 1.0},
   "sla": {"as_of": "2026-09-30T16:30:00", "open": 2, "overdue": 2, "due_within_24h": 0},
@@ -353,7 +354,7 @@ export type Outcome = "REFUND" | "DECLINE" | "INVESTIGATE" | "INFO_ONLY";
 export type Route = "AUTO_RESOLVE" | "HUMAN_APPROVAL" | "FRAUD_TEAM";
 export type Priority = "P1" | "P2" | "P3";
 export type HoldReason = "customer_not_found" | "ambiguous_match" | "no_match" | "category_revised"
-  | "self_check_failed" | "unknown_auth_method" | "llm_error";
+  | "self_check_failed" | "unknown_auth_method" | "llm_error" | "second_issue";
 
 export interface CaseListItem {
   complaint_id: string;
@@ -470,11 +471,12 @@ export interface CaseDetail {
     allowed_txn_ids: string[];
     allowed_amounts: Money[];
   } | null;
+  other_issues: { category: Category; quote: string }[] | null;   // a second problem in the complaint
   reply: { text: string; redraft_count: number;
            self_check: { passed: boolean; problems: string[]; found_txn_ids: string[]; found_amounts: Money[] } | null
          } | null;
   usage: { cost_myr: Cost; latency_ms: number; prompt_version: string; schema_version: string;
-           policy_version: string; extract: LLMUsage; draft: LLMUsage[] } | null;
+           policy_version: string; extract: LLMUsage; issues: LLMUsage | null; draft: LLMUsage[] } | null;
   runs: { run_id: string; run_kind: "autonomous" | "reprocess"; created_at: IsoTime; route: Route | null;
           outcome: Outcome | null; hold_reason: HoldReason | null; cost_myr: Cost; latency_ms: number }[];
   events: AuditEvent[];                // oldest first
@@ -702,3 +704,4 @@ The human counts now include the platform actions. Approvals include second-tier
 - **2026-10-23**: first version. `GET /api/cases`, `GET /api/cases/{id}`, `GET /api/metrics`, `GET /api/audit`; CORS open.
 - **2026-10-23**: added "Coming next": the planned login, roles, actions and new fields (being built in `b-ops-platform`).
 - **2026-10-23**: **login, roles and the platform actions are built** (`b-ops-platform`). New fields on the list and the detail (workflow, sensitive, assigned_to, escalation, overridden; autonomous / final / differs, draft_reply, fraud_outcome); new list filters; new metrics. Lists and the detail now show the **current** run (the same as before unless a case was sent back). Nothing was renamed or removed.
+- **2026-10-23**: **second-issue check** (`b-second-issue`). New hold reason `second_issue` ("Complaint raises a second issue"); the detail adds `other_issues` (`[{category, quote}]`) and `usage.issues`. Additive only.

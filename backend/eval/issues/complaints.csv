@@ -1,0 +1,109 @@
+complaint_id,customer_id,received_at,channel,subject,text
+ISS-00001,CUS-01832,2026-09-22 16:26,App chat,,"salam, sy keluar rm1,000 kt kepong mall smlm 14/09/2026 tp duit tak keluar sepenuhnya. akaun sy still kena tolak. tolong check pls
+
+btw, sy jgk kena charge dua kali utk satu pembelian tu jgk. tak tahu kenapa, tolong semak sekali pls tq"
+ISS-00002,CUS-02067,2026-08-15 11:39,Social media DM,,"hi ok so i tried to withdraw rm1000 on 10/08/2026 at the atm and the machine didnt give me any cash at all but my account still got debited wth
+
+also my transfer to my cousin never reached him, the money just vanished from my side and he says nothing came in, pls check this too"
+ISS-00003,CUS-02443,2026-07-31 11:18,Branch form,,"Aiyo, ATM kat Taiping Mall tak keluarkan duit leh pada 23 Julai, tapi account saya kena tolak RM400 lah. Tolong check cepat ya, saya dah susah hati ni. Ada sumber lain yang saya tak buat pun, saya tak pasti dari mana, tapi kad saya ada transaction kat merchant online yang saya tak ingat langsung, jadi tolong semak juga lah. Thanks."
+ISS-00004,CUS-02394,2026-07-20 22:32,Email,ATM did not dispense cash,"Subject: CASH NOT DISPENSED!!! ATM WITHDRAWAL 👿
+
+Hello, the ATM did NOT give me all my cash when I withdrew about RM1,500 last Friday!!! But the WHOLE amount was deducted from my account!!! I want this sorted out QUICKLY, I cannot be losing my money like this!!!
+
+Also, I was tricked by a scammer over the phone who pretended to be from the bank and I sent them money. I need the bank to look into this and help me get it back too!!!"
+ISS-00005,CUS-01452,2026-07-04 16:31,App chat,,"Hi, ATM kat Alor Setar Mall tak keluar duit on 1 Jul tapi account saya kena tolak RM400.00. Dah call hotline untuk report hal ni tadi. Thanks."
+ISS-00006,CUS-00865,2026-09-20 10:15,App chat,,saya keluarkan RM400.00 semalam tp duit tak keluar penuh lah. akaun sy tetap kena tolak. tolong check dan pulangkan duit sy pls. sy dh call hotline utk report hal ni tadi.
+ISS-00007,CUS-02530,2026-08-03 13:57,App chat,,"hi bank, the atm didnt give me all the cash wen i took out RM1000.00 on 1 aug, but the full amount still got deducted from my acc. pls advise, i already called the hotline to report it"
+ISS-00008,CUS-00569,2026-08-09 12:36,Social media DM,,"Eh, I withdraw RM500 on 8 Aug lah, but the machine tak keluarkan any cash leh. Yet my account still kena debit. Pls check and refund ok, thanks. I already call the hotline to report this already."
+ISS-00009,CUS-02088,2026-07-30 19:51,App chat,,"Ya Allah this is so annoying!!! RM 48.87 at FARMASI SEJAHTERA Shah Alam is charged TWICE on my statement for 25/07/2026 (card ending 5649) and I only bought ONE thing!!! Please reverse the extra one NOW 😡 Also my transfer to my cousin never reached her account and the app just said ""processing"" for days!!! Fix it please!!!"
+ISS-00010,CUS-01799,2026-08-25 12:09,Call centre note,,"Hi, I called earlier about my card. It got charged twice at BukuOnline today, RM 39.45 each time. Can the bank please refund the extra one? Thanks.
+
+Also, last week an ATM took money out of my account but didn't give me the cash. Can someone look into that as well?"
+ISS-00011,CUS-02524,2026-09-13 14:23,Branch form,,"bayaran rm1677.19 kt elektrohub petaling jaya keluar dua kali dlm akaun sy 9 sept. tolong bantu pls. oh dan sy jumpa satu lagi transaksi kad yg sy x buat, tolong semak sekali tq"
+ISS-00012,CUS-02269,2026-08-03 21:30,App chat,,"hi sorry i was charged twice today for RM 105.99 dy i only made 1 purchase wat do i do
+
+also i think i got tricked by some scammer n sent money to them, not sure how to get it back pls help"
+ISS-00013,CUS-01085,2026-08-23 11:55,Email,URGENT,"Hi lah, aiyo, I want to report one problem leh. Last Friday at ElektroHub Kota Bharu, my card kena caj 2 kali, RM1,225.31 taken twice, sia. Please check and refund the extra lah, thank you."
+ISS-00014,CUS-01404,2026-09-28 13:18,Branch form,,"Eh bank ni KENA CAJ 2 kali!!! Bayaran RM15.00 di Restoran Selera Sungai Petani keluar DUA KALI dalam akaun saya pada 20 September. Tolong la cepat settle ni, saya dah pening dah!!! 😡"
+ISS-00015,CUS-00136,2026-09-07 10:24,Email,Caj berganda,"Hi, saya kena caj 2 kali untuk bayaran RM25.15 di bukuonline hari Khamis lepas. Duit tu keluar dua kali dalam akaun saya. Boleh tolong check dan betulkan secepat mungkin? Thanks."
+ISS-00016,CUS-02876,2026-08-11 08:37,Branch form,,"kad sy kena caj 2 kali kat TiketKu Travel on 30 Jul, RM377.92 each. beli sekali je. tolong refund ya, tq"
+ISS-00017,CUS-02486,2026-08-11 14:23,Call centre note,,"hi ya i called yesterday bout the IBG transfer i did to hakim bin ibrahim on 8 aug, RM3120.34, it failed but my account still got debited leh, hakim said he never received anything. pls check asap. also i think i got charged twice for the same purchase too, pls look into that as well thanks"
+ISS-00018,CUS-00570,2026-09-22 13:27,App chat,,"Hello lah, DuitNow transfer RM2800 ke account hujung 2109 hari ini tak masuk pun leh, tapi duit saya dah kena deduct from account. Tolong check urgent ya, saya dah risau sangat ni. Oh, and satu lagi lah, masa hari lain saya pergi ATM, duit dah keluar dari account tapi cash tak keluar langsung, tolong settle sekali ya."
+ISS-00019,CUS-00994,2026-07-29 14:30,Email,Pindahan gagal,"Subject: WANG SAYA HILANG!!! Tolong segera 😡
+
+Salam, saya BENAR-BENAR marah! Saya buat pemindahan DuitNow lebih kurang RM1,900 ke akaun berakhir 2065 hari Sabtu lepas dan transaksi itu GAGAL, tetapi wang tetap DITOLAK daripada akaun saya!!! Ini tidak boleh diterima. Sila siasat SEKARANG dan pulangkan wang saya.
+
+Selain itu, saya juga mahu pihak bank menyiasat satu lagi perkara: ada pembayaran kad yang SAYA TIDAK BUAT dan saya tidak kenal langsung. Sila semak dan batalkan!!!
+
+Tolong bantu saya secepat mungkin."
+ISS-00020,CUS-01606,2026-08-02 16:40,Social media DM,,"Hi, saya transfer RM171.01 kepada Zhi Hao pada 02/08/2026 guna IBG tapi transaction failed, tapi duit dah kena tolak dari akaun saya. Boleh tolong check dan refund? Thanks.
+
+Oh, dan satu lagi, saya rasa saya pernah kena tipu dengan scammer yang suruh saya transfer duit, jadi saya nak tahu apa bank boleh buat tentang tu."
+ISS-00021,CUS-00240,2026-09-24 19:06,App chat,,"assalamualaikum, sy ada transfer rm 338.43 kepada syazwani hari ahad smlm, tp dh tak sampai kt dia. baki sy dh kurang tp dia tak terima. mcm mana nk check? tq"
+ISS-00022,CUS-01202,2026-09-16 21:26,Branch form,,"Assalamualaikum, transfer RM2,019.20 hari 14/09/2026 kepada Rohani tak masuk dekat dia, tapi baki saya dah kurang. Tolong check dan refund duit saya. Saya buat transfer ni guna ATM ke app, tak ingat yang mana satu sebab masa tu dah laju."
+ISS-00023,CUS-02975,2026-07-20 19:31,App chat,,"Bro, I made a DuitNow transfer lah, around RM650 to Dinesh a/l Velu on 20/07/2026, but it failed one leh, and somehow the money still got deducted from my account. Pls check urgently."
+ISS-00024,CUS-00990,2026-07-29 22:30,App chat,,"Bank ni memang TAK BOLEH HARAP!!! Saya ada transfer RM1340.73 ke akaun berakhir 6558 pada 21 Julai, tapi wang tu TAK SAMPAI kepada penerima. Baki saya dah berkurang tapi penerima tak dapat apa-apa 😡 Tolong semak SEKARANG dan pulangkan duit saya!!!"
+ISS-00025,CUS-02635,2026-09-05 16:17,Email,Complaint,"Hi there, hope you're doing well. Can someone please check on a RM10 monthly service charge that showed up on my account for August? I don't recall signing up for anything that would cost that, so I'm a bit confused. Could you explain what it's for, or help me get it reversed if it shouldn't be there? Thanks a lot.
+
+Also, I think I've been charged twice for the same purchase, so could you check that one as well?"
+ISS-00026,CUS-00843,2026-07-29 19:32,Branch form,,"salam, kenapa ada annual fee credit card bulan julai? sy x ingat dh pernah minta, tolong check blh? tq. oh lagi satu, transfer sy smlm kpd kwn x masuk lg, pls tolong semak."
+ISS-00027,CUS-00741,2026-09-16 17:53,Email,Caj tidak betul,"Assalamualaikum, kenapa saya kena caj yuran tahunan kad debit utk bulan sept ni?? saya tak ingat pn pernah minta kad tu dinaikkan ke pakej berbayar. tolong check balik dan refund kalau salah. jgn lupa ye.
+
+Oh dan satu lagi, semalam ATM kat depan pejabat tu ambik duit dari akaun saya tapi duit tak keluar langsung. tolong semak sekali."
+ISS-00028,CUS-02543,2026-07-13 09:17,Call centre note,,"Eh, I called already lah, the bank keep charging me RM12 annual fee for my debit card in June. Why like that leh? I never agree to pay any fee like that, please check and reverse it for me. Oh and another thing, got one payment on my card that I did not make at all, somebody else used it, I want you guys to look into that too, cannot just ignore it leh."
+ISS-00029,CUS-00840,2026-07-29 12:19,Email,Caj tidak betul,Assalamualaikum!!! Saya TAK FAHAM kenapa ada caj tahunan kad ATM RM150 dalam akaun saya bulan Julai!!! Bank lain tak caj macam ni langsung 😡 Tolong semak dan betulkan secepat mungkin!!!
+ISS-00030,CUS-01313,2026-07-13 19:18,App chat,,"Salam, kenapa ada caj tahunan kad ATM bulan Jun? Saya dah 66 tahun. Tolong check asap ya, thanks."
+ISS-00031,CUS-00316,2026-08-18 08:34,Call centre note,,"saya nak complain pasal caj tahunan kad ATM rm150.00 untuk bulan ogos. tak sure kenapa kena caj, tolong semak balik pls"
+ISS-00032,CUS-00915,2026-07-24 13:42,Social media DM,,"Saya tak faham la kenapa ada caj tahunan kad ATM bulan Jun dalam akaun saya, kad ATM saya ni baru je ambik tak lama dulu. tolong check dan refund balik duit saya ye"
+ISS-00033,CUS-01317,2026-09-09 11:18,App chat,,"Eh, I need help lah. Someone I met online asked me for RM21,884.53 for a medical emergency, so I transferred it to Rizal bin Omar on 28 August 2026. Now they stop replying already leh, I think I kena scammed bro. Please help me check and get my money back ah. Also one more thing lah, my card got charged twice for the same purchase, can you help me sort that out too?"
+ISS-00034,CUS-00871,2026-07-05 19:43,Email,Aduan,"Subject: TOLONG!!! Penipuan, RM1824.66 hilang hari ini!!! 😡
+
+Saya tak percaya bank boleh biarkan ini berlaku!!! Saya dapat panggilan daripada seorang lelaki yang MENGAKU pegawai polis dan dia kata akaun saya terlibat dengan kes pengubahan wang haram!!! Dia paksa saya pindahkan duit ke 'akaun selamat' konon-konon untuk melindungi wang saya. Saya bodoh, saya ikut!!! Saya transfer RM1824.66 kepada Lakshmi a/p Gopal pada 25/06/2026!!! Sekarang baru saya sedar ini PENIPUAN!!! Tolong BEKUKAN transaksi ini SEKARANG!!!
+
+Satu lagi perkara yang saya nak bank settle!!! Hari yang sama, saya guna ATM dan duit SUDAH KELUAR dari akaun saya tapi wang tunai TAK KELUAR langsung!!! Mesin ambil duit tapi tak bagi duit kat saya!!! Tolong semak dan betulkan ini juga!!! 😠"
+ISS-00035,CUS-01076,2026-08-15 18:09,Social media DM,,"Salam bank, saya ada masalah ni. Hari tu saya transfer RM5076.96 untuk skim pelaburan yang saya jumpa dalam kumpulan chat, ke akaun berakhir 8255 minggu lepas. Sekarang saya tak boleh keluarkan duit, dan admin dah hilang entah ke mana. Boleh tolong check?
+
+Lagi satu, saya perasan ada caj yang saya tak faham dalam akaun saya. Macam yuran tahunan ke service charge ke, tak tahu kenapa kena. Boleh tolong jelaskan dan kalau salah, tolong refund ya?"
+ISS-00036,CUS-01507,2026-09-13 19:04,Branch form,,"hai, sy dah masuk skim pelaburan dari grup chat, transfer RM5621.59 ke akaun hujung 7198 hari jumaat lps. skrg tak boleh keluarkan duit dan admin dah hilang. tlg tolong semak dh. pastu, service bank ni memang teruk jugak, staff tak mesra, hotline tak pernah jawab, app asyik logout, dan queue kat cawangan panjang gila. tq"
+ISS-00037,CUS-00971,2026-08-17 13:04,Call centre note,,"i called the bank yesterday also i was tipu by someone who call me say my parcel got illegal stuff inside. i panic and transfer RM5000.05 to account ending 5027 on 5 August 2026. now cannot be recovered already, the scammer tipu me. please help me get back the money, i really need it"
+ISS-00038,CUS-00744,2026-09-28 21:59,Social media DM,,"Aiyoh, I really kena scammed lah. Got one man call me, say he police officer, say my account linked to money laundering case, then tell me must move my savings to ""safe account"" quick quick. So I transfer RM2,334.33 to Yap Wei Ming on 26/09/2026 leh. Only later I realise it was scam, the money cannot be recovered already and that scammer really tipu me. Can help me check or get back my money or not? Please lah, I need help urgently."
+ISS-00039,CUS-01222,2026-07-14 12:43,Branch form,,"Dear Teratai Bank, SAYA NAK MINTA TOLONG!!! Someone I met online asked me for RM27457.26 for a medical emergency and I transferred it to Wong Wei Ming on 12/07/2026 😡. Now they stopped replying and I think the scammer TIPU saya!!! The money cannot be recovered?? Please check this urgently!!!"
+ISS-00040,CUS-02801,2026-07-12 18:35,App chat,,"Hi, saya nak report something. Someone I kenal online minta RM2,014.83 for medical emergency, and I dah transfer to Izzati on 10 July 2026. Lepas tu dia terus stop reply. Saya rasa saya kena tipu lah. Money tu cannot be recovered ke? Tolong check boleh tak."
+ISS-00041,CUS-01954,2026-08-06 18:22,Call centre note,,"sy call pasal email tk reply lps 2 minggu lbh kurang psl tukar alamat sy. tlg semak. smlm sy dh hntr email kedua pun xde jwpn jgk. dan sy jg nk tnya pasal caj dubel utk pembelian yg sama, kene caj 2 kali. tq"
+ISS-00042,CUS-02799,2026-08-19 15:26,App chat,,"app bank asyik log out sendiri 3 hari dh tak boleh bayar bil lansung x leh masuk langsung, tolong la betulkan cepat
+
+also transfer hari tu x sampai pun kat org tu, duit dah keluar tapi dia kata takde masuk, tolong check"
+ISS-00043,CUS-01538,2026-08-14 08:41,Email,Poor service,"Hello lah, I already email you guys about updating my address like two weeks ago, but until now nobody reply leh. Really cannot believe lah, I need this sorted out soon. Please check and respond ASAP.
+
+Also, one more thing leh: last time I use the ATM, the machine debit my account but did not give out any cash. Please look into this one too lah."
+ISS-00044,CUS-01555,2026-08-29 19:04,App chat,,"Tunggu 2 JAM kat branch Kajang!!! Staff pun ROUDE gila, langsung tak layan elok. Teruk betul service bank ni!!! 😡 Dan ada satu lagi, saya tak buat transaksi kad ni tapi ada caj masuk, tolong check sekali!!!"
+ISS-00045,CUS-02855,2026-09-25 22:20,App chat,,"Assalamualaikum, mesin deposit tunai kat cawangan Bangsar tu rosak dah seminggu. Hari tu saya datang nak deposit tapi tak boleh guna, tak ada staff pun bagi tahu bila nak okay balik. Boleh tolong check?"
+ISS-00046,CUS-01209,2026-07-04 17:02,Social media DM,,"batu pahat branch tutup awal lg dh sy pls, sy nak deposit cheque tapi x sempat, sbb time tu dh x buka. kesian sy smlm trus tgk jam pun x bukak bkn kah. tq"
+ISS-00047,CUS-02907,2026-08-08 19:22,Email,Aduan,"Assalamualaikum, app phone asyik log out sendiri 3 hari ni tak boleh bayar bil langsung... dah cuba banyak kali tak jadi jadi, very frustrating"
+ISS-00048,CUS-01605,2026-07-26 18:20,App chat,,"Eh, the Alor Setar branch tutup awal lah, like before the posted hours one! I went there wanting to deposit my cheque leh, but cannot lah, cannot deposit. Really frustrating sia, the timing on the sign said open till later but they already closed. Please check why lah, thanks."
+ISS-00049,CUS-01322,2026-09-21 13:49,Email,Unauthorised transaction,"Subject: UNAUTHORISED TRANSACTION!!! Please help urgently 😡
+
+Hi, this is really unacceptable!!! Yesterday there was a RM218.38 charge at BETZONE ONLINE on my card and I did NOT make it!!! My card is still in my hands, so I have no idea how this happened. I want this checked ASAP and the money REFUNDED to me!!!
+
+Also, I've noticed I was charged TWICE for the same purchase recently, and I want that sorted out too. I shouldn't be paying for one thing twice!!!
+
+Please reply quickly. I'm really stressed about this!!!"
+ISS-00050,CUS-00791,2026-07-31 19:49,App chat,,"Hi, need help with something. There's a transaction of RM1,555.11 at LUXEGOODS LONDON last week on my card that I did not make. My card is still with me, so I'm not sure how this happened. Can you please check and help me sort this out? Thanks.
+
+Also, a transfer I made earlier didn't seem to reach the recipient, can someone look into that as well?"
+ISS-00051,CUS-01457,2026-07-28 20:29,Call centre note,,"saya nak complaint pasal transaksi kad rm 1,274.63 kat elektrohub pd 20 july 2026. sy masih ada kad dgn sy, sy tak buat pembelian ni. tolong semak & reverse. tq
+
+also, sy nak mention satu lagi benda: pernah ATM bank ni potong duit dari akaun sy tapi duit tak keluar langsung. pls betulkan jugak."
+ISS-00052,CUS-00719,2026-07-22 19:10,Email,Transaksi tanpa kebenaran,"hi bank, ada transaksi RM3361.46 kat GIFTCARD HUB smlm dkt kad saya, saya tak buat la. kad masih ada dgn saya ok. tolong check & reverse asap.
+
+plus, saya nak tanya kenapa ada caj yg saya tak faham kat statement ni, something like service charge ke annual fee ke apa entah. tolong explain & refund kalau salah. thanks"
+ISS-00053,CUS-02933,2026-07-18 19:17,Call centre note,,"Aiyo, I called already leh, want to dispute one transaction on my card ending the usual digits, RM945.14 at TECHMART SG on 18/07/2026. Wah, I never buy anything there lah. My card is still with me, I didn't lose it or give to anybody, so really don't know how this one can go through. Please check and reverse this lah, thank you."
+ISS-00054,CUS-00890,2026-08-10 17:06,Email,Unauthorised transaction,"Hi, I am VERY upset!!! There is a transaction of RM155.51 at LUXEGOODS LONDON last week on my card and I did NOT make it!!! My card is still with me, I never lost it. Please look into this IMMEDIATELY and tell me what you are going to do about it. 😡"
+ISS-00055,CUS-00194,2026-08-29 08:25,Email,Unauthorised transaction,"Hi bank, hope you can help. I didn't authorise the RM 844.80 payment at ElektroHub on 27/08/2026, and I didn't make it myself. Can you please block my card and refund me? Thanks a lot."
+ISS-00056,CUS-01767,2026-08-27 08:14,App chat,,"salam, siapa guna card sy? rm1400 kat elektrohub muar on 17/08/2026, sy tak buat pun. tolong refund ya."
+ISS-00057,CUS-00809,2026-08-02 13:09,Call centre note,,"Customer called. DuitNow transfer of RM1,457.10 to Hakim yesterday failed per customer but the account was debited. Recipient did not receive it. Pastu ada caj fee pulak."
+ISS-00058,CUS-01523,2026-09-03 20:51,Email,Aduan,"Hai, saya telah dicaj dua kali di Farmasi pada 1 September sebanyak RM 30.11 (kad berakhir 8410). Saya hanya membuat satu pembelian. Mohon semak dan pulangkan wang saya. Staff kurang ajar and tak nak tolong."
+ISS-00059,CUS-00457,2026-09-02 16:01,App chat,,"Hi, ATM tak keluar duit hari Isnin lepas, tapi account kena tolak RM800.00. Thanks. Call hotline 3 kali xde org angkat."
+ISS-00060,CUS-01838,2026-07-05 19:33,Call centre note,,Customer called. Disputes a debit card annual fee of RM12.00 in June. Customer is 65 years old. App korang asyik logout.
+ISS-00061,CUS-00987,2026-07-20 17:20,Social media DM,,"Assalamualaikum, terdapat transaksi RM2406.78 di LUXEGOODS LONDON semalam pada kad saya yang bukan saya lakukan. Kad masih ada dengan saya. Mohon semak dan pulangkan wang saya. Atm pun tak keluar duit."
+ISS-00062,CUS-02761,2026-08-02 22:10,Branch form,,"Salam, saya sertai kerja sambilan dalam kumpulan aplikasi mesej yang bayar komisen untuk 'like' video. Mereka minta saya bayar RM1,931.41 kepada Khairul pada 02/08/2026 untuk keluarkan pendapatan, kemudian terus sekat saya. Card transaction yg bukan saya buat."

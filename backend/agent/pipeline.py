@@ -1,4 +1,4 @@
-"""Orchestrates one complaint: extract → match_and_decide → draft → self-check → hold. Owner: Dev B.
+"""Orchestrates one complaint: extract (+ issues check) → match_and_decide → draft → self-check → hold. Owner: Dev B.
 
 Every step is injected, so stubs and real implementations swap without touching this file.
 Extract and draft are async (LLM calls); engine and check are plain functions.
@@ -6,22 +6,30 @@ Extract and draft are async (LLM calls); engine and check are plain functions.
 An LLM failure never costs the complaint its prediction row: extraction falls back to keyword clues, drafting to
 the template holding reply, and the case is held with llm_error for a human. Only an engine bug leaves a run
 without a decision.
+
+The issues check (backend/agent/issues.py) runs alongside extraction. A verified second issue holds the case for an
+officer (second_issue) before drafting; it never changes a scored field, and a failed check counts as no second issue.
 """
 from __future__ import annotations
 
+import asyncio
 import functools
 import uuid
+from typing import Awaitable, Callable
 
 from backend.agent.engine import match_and_decide
+from backend.agent.issues import detect_issues, other_issues
 from backend.agent.parser import extract as llm_extract
 from backend.agent.reply_generator import code_draft, draft as llm_draft
 from backend.agent.reply_rules import combined_check
 from backend.agent.router import hold
 from backend.agent.stubs import fake_extract
 from backend.contracts import (
-    AgentRun, Checker, Complaint, Decision, Drafter, Engine, EngineResult, Extractor, LLMUsage, RunKind,
+    AgentRun, Checker, Complaint, Decision, Drafter, Engine, EngineResult, Extractor, LLMUsage, OtherIssue, RunKind,
 )
-from backend.llm.prompts import CLUES_SCHEMA_VERSION, DRAFT_PROMPT_VERSION, EXTRACT_PROMPT_VERSION
+from backend.llm.prompts import CLUES_SCHEMA_VERSION, DRAFT_PROMPT_VERSION, EXTRACT_PROMPT_VERSION, ISSUES_PROMPT_VERSION
+
+IssuesCheck = Callable[[Complaint], Awaitable[tuple[list[OtherIssue], LLMUsage | None]]]
 
 MAX_REDRAFTS = 1
 
@@ -44,7 +52,7 @@ async def draft_or_template(
         return reply, usage, False
     except Exception as exc:
         note_error(run, f"draft failed, used code-written reply: {exc}")
-        reply, usage = await code_draft(result)
+        reply, usage = await code_draft(result, also=[i.category for i in run.other_issues])
         return reply, usage, True
 
 
@@ -56,16 +64,23 @@ async def run_pipeline(
     draft: Drafter | None = None,  # None: the LLM reply writer for this complaint (LLM_DRAFT)
     check: Checker = combined_check,
     run_kind: RunKind = "autonomous",
+    issues_check: IssuesCheck = detect_issues,
 ) -> AgentRun:
     run = AgentRun(run_id=uuid.uuid4().hex, complaint_id=complaint.complaint_id, run_kind=run_kind,
                    prompt_version=EXTRACT_PROMPT_VERSION, schema_version=CLUES_SCHEMA_VERSION)
     llm_failed = False
-    try:
-        run.clues, run.extract_usage = await extract(complaint)
-    except Exception as exc:  # provider down or invalid output after the retry: keyword clues, held for a human
-        note_error(run, f"extract failed, used keyword fallback: {exc}")
+    extracted, issues_found = await asyncio.gather(extract(complaint), issues_check(complaint), return_exceptions=True)
+    if isinstance(extracted, BaseException):  # provider down or invalid output after the retry: keyword clues, held
+        note_error(run, f"extract failed, used keyword fallback: {extracted}")
         run.clues, run.extract_usage = await fake_extract(complaint)
         llm_failed = True
+    else:
+        run.clues, run.extract_usage = extracted
+    if isinstance(issues_found, BaseException):  # the check is a safeguard: failing means "no second issue"
+        note_error(run, f"issues check failed, no second-issue hold: {issues_found}")
+        issues = []
+    else:
+        issues, run.issues_usage = issues_found
     if run.extract_usage.provider == "fake":
         run.prompt_version = run.schema_version = "keywords"
 
@@ -74,9 +89,12 @@ async def run_pipeline(
     except Exception as exc:  # engine bug; business cases come back as holds, not exceptions
         note_error(run, f"engine failed: {exc}")
         return run
+    run.other_issues = other_issues(issues, result.decision.category, complaint)
+    if run.other_issues:  # before drafting, so the reply is written for a case an officer still has to approve
+        result = result.model_copy(update={"decision": hold(result.decision, "second_issue")})
     run.match, run.decision, run.evidence = result.match, result.decision, result.evidence
     if draft is None:
-        draft = functools.partial(llm_draft, complaint=complaint)
+        draft = functools.partial(llm_draft, complaint=complaint, also=[i.category for i in run.other_issues])
 
     reply, usage, failed = await draft_or_template(draft, result, None, run)
     llm_failed |= failed
@@ -91,6 +109,8 @@ async def run_pipeline(
 
     run.reply_text = reply
     run.prompt_version += "+" + ("code-template" if usage.provider == "fake" else DRAFT_PROMPT_VERSION)
+    if run.issues_usage is not None:
+        run.prompt_version += "+" + ISSUES_PROMPT_VERSION
     if not run.self_check.passed:
         run.decision = hold(run.decision, "self_check_failed")
     if llm_failed:

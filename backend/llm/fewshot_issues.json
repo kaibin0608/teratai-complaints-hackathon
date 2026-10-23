@@ -1,0 +1,150 @@
+[
+ {
+  "channel": "App chat",
+  "subject": "",
+  "text": "Kad debit sy dicaj 2x utk satu pesanan Lazada RM59.90 hari Ahad. Mohon pulangkan satu.",
+  "issues": [
+   {
+    "category": "DUPLICATE_CHARGE",
+    "quote": "dicaj 2x utk satu pesanan Lazada RM59.90"
+   }
+  ]
+ },
+ {
+  "channel": "Email",
+  "subject": "Yuran",
+  "text": "Kenapa penyata tunjuk yuran kad ATM RM12 bulan Mei? Sy tak pernah setuju dengan yuran ni.",
+  "issues": [
+   {
+    "category": "FEE_DISPUTE",
+    "quote": "yuran kad ATM RM12 bulan Mei"
+   }
+  ]
+ },
+ {
+  "channel": "App chat",
+  "subject": "",
+  "text": "ATM di Stesen Sentral telan RM200 sy, wang tunai tak keluar. Sy sudah telefon talian 24 jam untuk laporkan perkara ini.",
+  "issues": [
+   {
+    "category": "ATM_NOT_DISPENSED",
+    "quote": "telan RM200 sy, wang tunai tak keluar"
+   }
+  ]
+ },
+ {
+  "channel": "Email",
+  "subject": "Card",
+  "text": "Two charges of RM88 at STREAMPLUS on my card this week, neither of them was me. Please block the card.",
+  "issues": [
+   {
+    "category": "UNAUTHORISED_CARD",
+    "quote": "Two charges of RM88 at STREAMPLUS on my card this week, neither of them was me"
+   }
+  ]
+ },
+ {
+  "channel": "Social media",
+  "subject": "",
+  "text": "Dapat call kononnya dari LHDN, sy pindah RM3,000 ke akaun 'selamat' dorang. Skrg nombor tu tak boleh dihubungi langsung.",
+  "issues": [
+   {
+    "category": "SCAM_TRANSFER",
+    "quote": "sy pindah RM3,000 ke akaun 'selamat' dorang"
+   }
+  ]
+ },
+ {
+  "channel": "Branch form",
+  "subject": "",
+  "text": "Pergi cawangan Ipoh nak tukar kad yang dah expired, tunggu 90 minit sebab kaunter cuma satu yang buka.",
+  "issues": [
+   {
+    "category": "SERVICE_QUALITY",
+    "quote": "tunggu 90 minit sebab kaunter cuma satu yang buka"
+   }
+  ]
+ },
+ {
+  "channel": "App chat",
+  "subject": "",
+  "text": "App crash every time I open the transfer page since the update. Please fix.",
+  "issues": [
+   {
+    "category": "SERVICE_QUALITY",
+    "quote": "App crash every time I open the transfer page"
+   }
+  ]
+ },
+ {
+  "channel": "App chat",
+  "subject": "",
+  "text": "IBG RM750 ke Siti tak sampai sejak Isnin tapi duit dah ditolak. Bila sy telefon nak tanya, ejen letak telefon tanpa jawab.",
+  "issues": [
+   {
+    "category": "FAILED_TRANSFER",
+    "quote": "IBG RM750 ke Siti tak sampai sejak Isnin"
+   },
+   {
+    "category": "SERVICE_QUALITY",
+    "quote": "ejen letak telefon tanpa jawab"
+   }
+  ]
+ },
+ {
+  "channel": "Email",
+  "subject": "Two things",
+  "text": "There's a RM420 charge from GAMEVAULT I never made. Separately, why was I billed a RM10 monthly service charge again?",
+  "issues": [
+   {
+    "category": "UNAUTHORISED_CARD",
+    "quote": "a RM420 charge from GAMEVAULT I never made"
+   },
+   {
+    "category": "FEE_DISPUTE",
+    "quote": "why was I billed a RM10 monthly service charge again"
+   }
+  ]
+ },
+ {
+  "channel": "Email",
+  "subject": "",
+  "text": "Saya tak kenal transaksi RM610 di MEGASTORE pada kad saya semalam, kad ada pada saya. ATM Jalan Ampang pula tak bagi tunai RM100 tapi akaun ditolak.",
+  "issues": [
+   {
+    "category": "UNAUTHORISED_CARD",
+    "quote": "Saya tak kenal transaksi RM610 di MEGASTORE pada kad saya"
+   },
+   {
+    "category": "ATM_NOT_DISPENSED",
+    "quote": "ATM Jalan Ampang pula tak bagi tunai RM100"
+   }
+  ]
+ },
+ {
+  "channel": "Call centre note",
+  "subject": "",
+  "text": "Cust reports ATM w/d RM300 at KL Sentral not dispensed, acct debited. Cust also unhappy branch staff refused to print a statement for him.",
+  "issues": [
+   {
+    "category": "ATM_NOT_DISPENSED",
+    "quote": "ATM w/d RM300 at KL Sentral not dispensed"
+   },
+   {
+    "category": "SERVICE_QUALITY",
+    "quote": "branch staff refused to print a statement for him"
+   }
+  ]
+ },
+ {
+  "channel": "App chat",
+  "subject": "",
+  "text": "Kena tipu 'ejen kerja part time', dah transfer RM900 ke akaun dia dan transfer tu memang tak boleh tarik balik ke?",
+  "issues": [
+   {
+    "category": "SCAM_TRANSFER",
+    "quote": "dah transfer RM900 ke akaun dia"
+   }
+  ]
+ }
+]

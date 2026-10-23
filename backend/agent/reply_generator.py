@@ -14,16 +14,19 @@ from backend.llm.prompts import build_draft_messages
 from backend.llm.registry import step_config, step_reasoning
 
 
-async def code_draft(result: EngineResult, feedback: list[str] | None = None) -> tuple[str, LLMUsage]:
+async def code_draft(result: EngineResult, feedback: list[str] | None = None,
+                     also: list[str] | tuple[str, ...] = ()) -> tuple[str, LLMUsage]:
     """The Drafter used for outages, fake:* config and --no-draft."""
-    return render(result), LLMUsage(provider="fake", model="code-template")
+    return render(result, also), LLMUsage(provider="fake", model="code-template")
 
 
-async def draft(result: EngineResult, feedback: list[str] | None = None, *, complaint: Complaint) -> tuple[str, LLMUsage]:
+async def draft(result: EngineResult, feedback: list[str] | None = None, *, complaint: Complaint,
+                also: list[str] | tuple[str, ...] = ()) -> tuple[str, LLMUsage]:
+    """also: categories of verified second issues; the reply mentions them in one sentence."""
     spec, _ = step_config("draft")
     if spec.provider == "fake":
-        return await code_draft(result, feedback)
+        return await code_draft(result, feedback, also)
     guidance = get_handler(result.decision.category).reply_guidance
-    messages = build_draft_messages(result, complaint, feedback, guidance)
+    messages = build_draft_messages(result, complaint, feedback, guidance, also)
     return await get_client().text(spec, messages, temperature=0.3, max_tokens=700,
                                    reasoning_effort=step_reasoning("draft"))

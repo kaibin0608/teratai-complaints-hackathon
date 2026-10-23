@@ -50,7 +50,14 @@ def get_adapter(provider: str) -> Adapter:
 STEPS = {
     "extract": lambda: (config.LLM_EXTRACT, config.LLM_EXTRACT_JSON_MODE),
     "draft": lambda: (config.LLM_DRAFT, config.LLM_DRAFT_JSON_MODE),
+    # the second-issue check: empty LLM_ISSUES follows the extraction model and its JSON mode
+    "issues": lambda: (config.LLM_ISSUES or config.LLM_EXTRACT, config.LLM_EXTRACT_JSON_MODE),
 }
+
+
+def issues_enabled() -> bool:
+    """LLM_ISSUES=off is the Day 2 kill switch for the second-issue check."""
+    return config.LLM_ISSUES.lower() != "off"
 
 
 def step_config(step: str) -> tuple[ModelSpec, JsonMode]:
@@ -63,12 +70,15 @@ def step_config(step: str) -> tuple[ModelSpec, JsonMode]:
 
 def step_reasoning(step: str) -> str | None:
     """Reasoning effort for a step, or None to leave the model's default."""
-    value = {"extract": config.LLM_EXTRACT_REASONING, "draft": config.LLM_DRAFT_REASONING}[step].strip()
+    value = {"extract": config.LLM_EXTRACT_REASONING, "draft": config.LLM_DRAFT_REASONING,
+             "issues": config.LLM_ISSUES_REASONING}[step].strip()
     return value or None
 
 
 def check_config() -> None:
     """Fail at startup, before any complaint is processed: every step's provider must exist and have its key."""
     for step in STEPS:
+        if step == "issues" and not issues_enabled():
+            continue
         spec, _ = step_config(step)
         get_adapter(spec.provider)
