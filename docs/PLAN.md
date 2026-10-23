@@ -27,6 +27,14 @@ Backend first, frontend second. Core before bonus, but the data model supports t
 | 2 · Dev B: LLM + Data | LLM config and client, extractor, case store, batch runner and export, reply writer | 2:48 |
 | 3 · API + Hardening | The organisers' update, contract API, messy-text test set, engine fixes, UI read API, where `dev` stands, what's left | 3:12 |
 
+**▶ [Watch the Teratai Agent Pipeline](https://claude.ai/artifact/GSuyBq9DMjESpQVZHPTq6F)**: a narrated walkthrough of how the backend agent turns one complaint into a checked decision and reply, why it's built this way, and how to explain it in the demo. It follows training complaint CMP-00244 on `dev` (23 Oct). The written version is [ARCHITECTURE.md](ARCHITECTURE.md), which also covers the LLM guardrails and the scaling plan.
+
+| Chapter | Covers | Length |
+|---|---|---|
+| 1 · The Pipeline | One complaint, step by step: the one idea, the whole pipeline, intake, understand (LLM + second-issue check), find the transaction, apply the policy, priority/language/route, draft the reply, self-check, store and hold | about 4:05 |
+| 2 · Why This Design | One LLM agent vs keyword rules vs the hybrid; why not let the model decide, why not keywords alone, why not seven agents; holds, surviving failures, "swap the model, same score" | about 3:05 |
+| 3 · Results + Pitch | The numbers (training, holdout, messy, `api_check`), cost and speed, a 30-second version, questions judges may ask | about 1:30 |
+
 ---
 
 ## Hackathon Scoring Reminder
