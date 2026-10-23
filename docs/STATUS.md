@@ -2,7 +2,7 @@
 
 This file tracks progress against [PLAN.md](PLAN.md). When you finish an item, tick it (`[x]`) in the same PR. Owners: **A** is Dev A (decision engine), **B** is Dev B (LLM, pipeline, DB, API), **UI** is the UI developer.
 
-Last updated: 2026-10-23, after `b-ops-platform` (branch `feat/b-ops-platform`).
+Last updated: 2026-10-23, after `a-fee-type-fix` (branch `feat/a-fee-type-fix`).
 
 ## Done
 
@@ -32,7 +32,7 @@ Last updated: 2026-10-23, after `b-ops-platform` (branch `feat/b-ops-platform`).
 - [ ] **C1 · Simple UI:** queues, one case (complaint, transaction, evidence, decision, reply, self-check), Approve / Edit & approve / Reject buttons. Needed for the 10-point human gate. *(UI, in progress; PLAN Phase 3)*
 - [ ] **C2 · API reachable from the organisers' laptop** (venue Wi-Fi or a tunnel), for Checkpoint 2 on Day 2 at 12:00. *(B)*
 - [ ] C3 · Reply-language tweak for formal Malay (about 25 training misses, about 0.07 points). Optional. *(B)*
-- [ ] C4 · `categories/fee.py` fee-type match counts any shared word, so "debit card annual fee" also matches a credit card annual fee and the two tie (e.g. CMP-00010 is held as `ambiguous_match`). Safe, but the exported transaction may be wrong. *(A)*
+- [x] C4 · `categories/fee.py` fee-type match fixed: changed `any()` to `all()` for word matching, so "debit card annual fee" no longer matches "credit card annual fee". CMP-00010 now confidently matches the correct transaction. 2,334 tests pass. *(A, `feat/a-fee-type-fix`)*
 
 ## Bonus platform backend (PLAN 2.2–2.4)
 
