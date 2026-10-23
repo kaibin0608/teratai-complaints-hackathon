@@ -1,22 +1,18 @@
 import { CircleAlert, LoaderCircle, RotateCw } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
 import { Button } from '@/components/shared/Button'
 import { StatusMessage } from '@/components/shared/StatusMessage'
-import { Tabs } from '@/components/shared/Tabs'
 import { useMetrics } from '@/hooks/useMetrics'
 import { Headline } from './Headline'
-import { AgentTab, OverviewTab, PeopleTab } from './MetricsTabs'
+import { OverrideFeed } from './OverrideFeed'
+import { MoneyCard, ProcessCard } from './ProcessAndMoney'
+import { TeamWorkload } from './TeamWorkload'
 
-const TABS = [
-  { value: 'overview', label: 'Overview' },
-  { value: 'agent', label: 'The agent' },
-  { value: 'people', label: 'People and refunds' },
-] as const
-
-/** Loads `GET /api/metrics` once (polled): the headline numbers, then three tabs of detail. */
-export function MetricsDashboard({ between }: { between?: ReactNode }) {
+/**
+ * The day at a glance: four numbers, then two columns. Left is the work (who holds it, what it is worth); right is the
+ * agent (where people changed it, how the process is doing). Loads `GET /api/metrics`, polled.
+ */
+export function MetricsDashboard() {
   const result = useMetrics()
-  const [tab, setTab] = useState<(typeof TABS)[number]['value']>('overview')
   if (result.status === 'loading') return <StatusMessage busy icon={LoaderCircle} title="Loading the numbers…" />
   if (result.status === 'error') {
     return (
@@ -38,11 +34,16 @@ export function MetricsDashboard({ between }: { between?: ReactNode }) {
   return (
     <div className="flex flex-col gap-section">
       <Headline m={m} />
-      {between}
-      <Tabs label="Dashboard sections" items={TABS} value={tab} onChange={setTab} />
-      {tab === 'overview' && <OverviewTab m={m} />}
-      {tab === 'agent' && <AgentTab m={m} />}
-      {tab === 'people' && <PeopleTab m={m} />}
+      <div className="grid items-start gap-section lg:grid-cols-2">
+        <div className="flex flex-col gap-section">
+          <TeamWorkload />
+          <MoneyCard m={m} />
+        </div>
+        <div className="flex flex-col gap-section">
+          <OverrideFeed />
+          <ProcessCard m={m} />
+        </div>
+      </div>
     </div>
   )
 }

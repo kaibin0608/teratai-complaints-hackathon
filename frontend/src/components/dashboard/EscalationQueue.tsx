@@ -9,6 +9,8 @@ import { useCaseList } from '@/hooks/useCaseList'
 export function EscalationQueue() {
   const result = useCaseList({ workflow: 'escalated', sort: 'priority', limit: 50 })
   const total = result.status === 'success' ? result.data.total : undefined
+  // Nothing escalated: no card at all. The "Needs you" list above already says all is clear.
+  if (total === 0) return null
 
   return (
     <div id="escalated" className="scroll-mt-4">
