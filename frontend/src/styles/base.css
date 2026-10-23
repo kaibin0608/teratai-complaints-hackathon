@@ -19,6 +19,24 @@
     color: var(--text-color-primary);
   }
 
+  /* Tailwind's reset gives buttons the plain arrow; everything you can click gets the hand, and disabled controls say no. */
+  button:not(:disabled),
+  [role='button'],
+  [role='tab'],
+  summary,
+  select:not(:disabled),
+  a[href],
+  label:has(input[type='checkbox']:not(:disabled)),
+  input[type='checkbox']:not(:disabled),
+  input[type='radio']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+
   /* All controls: one focus ring, keyboard only. */
   :focus-visible {
     outline: none;
