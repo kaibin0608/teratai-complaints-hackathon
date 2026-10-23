@@ -22,7 +22,7 @@ export function CaseTable({ items }: { items: readonly CaseListItem[] }) {
   return (
     <div className="overflow-x-auto rounded-card border border-default">
       <table className="w-full text-sm">
-        <thead className="bg-subtle text-left text-xs text-secondary">
+        <thead className="bg-subtle text-left text-[11px] tracking-wide text-secondary uppercase">
           <tr>
             {COLUMNS.map((label) => (
               <th key={label} scope="col" className="px-cell-x py-cell-y font-medium whitespace-nowrap">
@@ -45,8 +45,10 @@ function CaseRow({ item }: { item: CaseListItem }) {
   const navigate = useNavigate()
   const open = (item.queue === 'awaiting_approval' || item.queue === 'with_fraud_team') && item.workflow !== 'closed'
   return (
-    <tr onClick={() => navigate(paths.case(item.complaint_id))} className="cursor-pointer align-top hover:bg-subtle">
-      <td className="px-cell-x py-cell-y">{item.priority && <PriorityBadge priority={item.priority} />}</td>
+    <tr onClick={() => navigate(paths.case(item.complaint_id))} className="cursor-pointer align-top transition-colors focus-within:bg-subtle hover:bg-subtle">
+      <td className={`px-cell-x py-cell-y ${item.priority === 'P1' ? 'shadow-[inset_3px_0_0_0_var(--color-error-600)]' : ''}`}>
+        {item.priority && <PriorityBadge priority={item.priority} />}
+      </td>
       <td className="px-cell-x py-cell-y whitespace-nowrap">
         <Link to={paths.case(item.complaint_id)} className="font-medium text-primary hover:text-link">
           {item.complaint_id}
@@ -54,7 +56,7 @@ function CaseRow({ item }: { item: CaseListItem }) {
         <div className="text-xs text-secondary tabular-nums">{formatIsoTime(item.received_at)}</div>
       </td>
       <td className="px-cell-x py-cell-y">
-        <div className="text-primary">{item.customer_name ?? <span className="text-secondary">Unknown customer</span>}</div>
+        <div className="font-medium text-primary">{item.customer_name ?? <span className="font-normal text-secondary">Unknown customer</span>}</div>
         <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-secondary">
           {item.channel}
           {item.vulnerable && <VulnerableBadge />}
@@ -89,7 +91,7 @@ function CaseRow({ item }: { item: CaseListItem }) {
               <>
                 <div className="text-primary">{outcomeLabel[item.outcome]}</div>
                 {item.outcome === 'REFUND' && item.refund_amount_myr && (
-                  <div className="text-xs text-secondary tabular-nums">{formatMoney(item.refund_amount_myr)}</div>
+                  <div className="text-xs font-medium text-body tabular-nums">{formatMoney(item.refund_amount_myr)}</div>
                 )}
               </>
             ) : (

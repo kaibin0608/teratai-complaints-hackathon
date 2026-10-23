@@ -1,6 +1,7 @@
 import { ListFilter, Search, X } from 'lucide-react'
-import { useEffect, useEffectEvent, useState, type ComponentProps, type ReactNode } from 'react'
+import { useEffect, useEffectEvent, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { controlClass } from '@/components/shared/FieldShell'
+import { SelectShell, selectClass } from '@/components/shared/SelectShell'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { cx } from '@/lib/cx'
 import { categoryLabel, holdReasonLabel, workflowLabel } from '@/lib/labels'
@@ -29,6 +30,19 @@ export function QueueFilters({ params, workflowCounts, showChanged, onChange, on
   })
   useEffect(() => writeSearch(settled), [settled])
 
+  // The "/" key jumps to the search box, as in most back-office tools (unless you are already typing somewhere).
+  const searchRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement
+      if (event.key !== '/' || target.closest('input, textarea, select, [contenteditable]')) return
+      event.preventDefault()
+      searchRef.current?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const active = activeFilters(params)
   // The common filters stay in view; the rest open on request, and stay open while one of them is in use.
   const hidden = [params.hold, params.workflow, params.assigned, params.sensitive || null, params.changed || null].filter(Boolean).length
@@ -37,16 +51,31 @@ export function QueueFilters({ params, workflowCounts, showChanged, onChange, on
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative w-72">
-          <Search size={14} aria-hidden className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-secondary" />
+        <div className="relative w-64">
+          <Search size={16} aria-hidden className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-secondary" />
           <input
-            type="search"
+            ref={searchRef}
+            type="text"
             value={text}
             onChange={(event) => setText(event.target.value)}
             placeholder="Search case, customer, subject"
             aria-label="Search cases"
-            className={cx('h-8 w-full pl-8', controlClass)}
+            className={cx('h-9 w-full pr-9 pl-9', controlClass)}
           />
+          {text ? (
+            <button
+              type="button"
+              aria-label="Clear search"
+              onClick={() => setText('')}
+              className="absolute top-1/2 right-2 grid size-6 -translate-y-1/2 place-items-center rounded-control text-secondary hover:bg-neutral-100 hover:text-primary"
+            >
+              <X size={14} aria-hidden />
+            </button>
+          ) : (
+            <kbd aria-hidden className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 rounded-badge border border-default px-1.5 text-[11px] text-secondary">
+              /
+            </kbd>
+          )}
         </div>
 
         <Select label="Category" value={params.category} onChange={(v) => onChange('category', v)} options={CATEGORIES.map((v) => [v, categoryLabel[v]])} />
@@ -57,7 +86,7 @@ export function QueueFilters({ params, workflowCounts, showChanged, onChange, on
           aria-expanded={expanded}
           onClick={() => setAsked((value) => !value)}
           className={cx(
-            'flex h-8 items-center gap-1.5 rounded-control border px-2.5 text-xs font-medium transition-colors',
+            'flex h-9 items-center gap-1.5 rounded-control border px-3 text-sm font-medium transition-colors',
             hidden > 0 ? 'border-brand-600 bg-brand-50 text-brand-800' : 'border-default text-body hover:bg-subtle',
           )}
         >
@@ -76,7 +105,7 @@ export function QueueFilters({ params, workflowCounts, showChanged, onChange, on
             className="flex items-center gap-1 text-xs font-medium text-link hover:text-link-hover"
           >
             <X size={12} aria-hidden />
-            Clear {active} filter{active === 1 ? '' : 's'}
+            Clear ({active})
           </button>
         )}
 
@@ -129,21 +158,23 @@ function Select({ label, value, onChange, options }: SelectProps) {
     onChange: (event) => onChange(event.target.value || null),
   }
   return (
-    <select {...props} className={cx('h-8 pr-6 text-xs', controlClass, value && 'border-brand-600 bg-brand-50 text-brand-800')}>
-      <option value="">{label}: any</option>
-      {options.map(([optionValue, optionLabel]) => (
-        <option key={optionValue} value={optionValue}>
-          {optionLabel}
-        </option>
-      ))}
-    </select>
+    <SelectShell>
+      <select {...props} className={cx('h-9', selectClass, controlClass, value && 'border-brand-600 bg-brand-50 font-medium text-brand-800')}>
+        <option value="">{label}: any</option>
+        {options.map(([optionValue, optionLabel]) => (
+          <option key={optionValue} value={optionValue}>
+            {optionLabel}
+          </option>
+        ))}
+      </select>
+    </SelectShell>
   )
 }
 
 function Check({ checked, onChange, label }: { checked: boolean; onChange: (value: boolean) => void; label: string }) {
   return (
-    <label className="flex h-8 items-center gap-1.5 text-xs text-body">
-      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="size-3.5 accent-brand-600" />
+    <label className="flex h-9 items-center gap-2 text-sm text-body">
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="size-4 accent-brand-600" />
       {label}
     </label>
   )
