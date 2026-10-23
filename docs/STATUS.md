@@ -77,7 +77,7 @@ Last updated: 2026-10-23, after the S2 regeneration (`665f3bc`).
 
 ## Day 2: submission and demo (PLAN Phase 5)
 
-- [ ] S1 · Run `scoring/api_check.py` against the served URL **from another laptop** (before 12:00) *(B)*. From the serving laptop over Wi-Fi (`http://10.0.30.131:8000`, `main` at `665f3bc`): 100.0, 9/9 probes; 20 at once 100.0, slowest 6.2s. The other-laptop run is still to do.
+- [x] S1 · Run `scoring/api_check.py` against the served URL **from another laptop** (before 12:00) *(B)*. From a teammate's laptop on the venue Wi-Fi (`http://10.0.30.131:8000`, `main` at `90c31c8`, started with `backend.bat`): 100.0, 9/9 probes, slowest 4.7s. From the serving laptop, 20 at once: 100.0, slowest 6.2s.
 - [x] S2 · Final rerun of changed test complaints, then regenerate and validate `predictions.csv`, and record the final training score (before 15:00) *(B)*. `665f3bc`: 750/750 valid; scored fields unchanged except reply_language on 12 rows (C3); RM0.0136. Final training score **100.00** (1,750 complaints, 0 critical errors).
 - [ ] S3 · `dev` → `main`, then PR `Submission: Santa_Claude` with `predictions.csv`, the freeze commit hash and the API URL (before 15:00) *(B)*
 - [ ] S4 · End-to-end demo test of the 3 flows: within the limit, over the limit → manager, fraud *(all, after B and U)*
