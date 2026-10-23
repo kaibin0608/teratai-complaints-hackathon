@@ -148,7 +148,7 @@ function StatusCell({ item }: { item: CaseListItem }) {
           {actionLabel(item.human_action.action)} · {item.human_action.actor}
         </span>
       )}
-      {item.queue === 'with_fraud_team' && item.sent && <span className="text-xs text-secondary">Holding reply sent</span>}
+      {item.queue === 'with_fraud_team' && item.sent && !item.human_action && <span className="text-xs text-secondary">Holding reply sent</span>}
       {item.overridden && (
         <Badge tone="warning" icon={PenLine} title="People changed the agent's decision or reply">
           Changed by people

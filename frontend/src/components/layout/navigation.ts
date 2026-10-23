@@ -1,4 +1,4 @@
-import { FilePlus, Inbox, LayoutDashboard, Layers, ScrollText, ShieldAlert, type LucideIcon } from 'lucide-react'
+import { FilePlus, Inbox, LayoutDashboard, Layers, Scale, ScrollText, ShieldAlert, type LucideIcon } from 'lucide-react'
 import { paths } from '@/lib/paths'
 import type { Role } from '@/lib/types'
 
@@ -17,4 +17,5 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Resolution Desk', to: paths.officer, icon: Inbox, roles: ['officer'] },
   { label: 'Investigation', to: paths.fraud, icon: ShieldAlert, roles: ['fraud'] },
   { label: 'Intake', to: paths.intake, icon: FilePlus, roles: ['officer', 'fraud', 'manager'] },
+  { label: 'Policy', to: paths.policy, icon: Scale, roles: ['manager'] },
 ]

@@ -80,7 +80,8 @@ frontend/src/
 | **Case page, full** | Adds **what the agent understood** (the clues), the **fraud outcome**, the **agent run history** with a banner when the page shows a re-run (the first run is the scored one), what the manager is being asked to approve (the escalation **proposal**), the person's reason, versions, reversals and related transactions |
 | **Manager console** | Escalations first, then 16 tiles in four groups (right now, the agent, people, refunds) and a chart for every breakdown `/api/metrics` returns (per-day trend, category, outcome, route, priority, holds, workflow, channel, language) plus models and throughput. Single-hue bars with the value at the tip, hover details and a Chart / Table switch on each |
 | **Audit log** | Adds From / To dates (`since` / `until`) |
-| **Quality** | Responsive layout (icon rail below 1280 px), 77 unit tests, production preview proxy, `AUTH_REQUIRED=true` verified |
+| **Policy page** (manager only, `/policy`) | The bank's fixed rules, read-only: the decision rule for each category, the limits and thresholds (including the routing and reply-language rules), the fee schedule, the service levels, and who may approve what (live approval limits from `GET /api/users`, plus the escalation rules). There is no backend route for policy, so it reads the same `data/*.csv` files the backend applies, at build time (alias `@data`); tests read the real files and fail if one changes shape |
+| **Quality** | Responsive layout (icon rail below 1280 px), 85 unit tests, production preview proxy, `AUTH_REQUIRED=true` verified |
 | **B3. Actions** | One decision bar and dialog for **every** platform action, with the rules in `lib/actions.ts` (headroom, escalate instead of approve, locked approve on a flagged reply, assigned-elsewhere and re-running notices). Covers the officer's and the fraud analyst's whole flow and the manager's second-tier approve / reject |
 
 ---

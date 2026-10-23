@@ -11,6 +11,8 @@ export const paths = {
   /** Every queue (manager). */
   cases: '/cases',
   audit: '/audit',
+  /** The bank's fixed policy, read-only (manager). */
+  policy: '/policy',
   case: (complaintId: string) => `/cases/${encodeURIComponent(complaintId)}`,
   /** Development only. */
   devUi: '/dev/ui',

@@ -49,6 +49,7 @@ src/
 - **The backend decides; the UI explains.** Roles, limits and the self-check are enforced by the backend. The UI mirrors them (`lib/actions.ts`) to hide the wrong buttons and say why, and always handles the backend saying no.
 - **Money is a string.** Format it with `formatMoney`; compare it with `compareMoney`. Never `parseFloat`.
 - **Times are Malaysia time with no offset.** Parse by parts (`lib/format.ts`); never `new Date(string)`.
+- **Policy is read, never copied.** The Policy page (manager only) reads the bank's `data/*.csv` files at build time through the `@data` alias, so no policy number is typed into the UI. It is read-only because the policy is fixed.
 - **Colours come from `tokens.css`.** Tailwind's default palette is removed, so only the brand palette exists. Spacing, radius and shadow tokens are meant to be tuned in that one file.
 - **Tailwind needs literal class names.** Don't build a class from pieces (`` `min-[${n}px]:hidden` `` generates nothing).
 - **SLA timers run on the demo clock** (30 Sep 2026 at the current time of day), because the data is from the past.

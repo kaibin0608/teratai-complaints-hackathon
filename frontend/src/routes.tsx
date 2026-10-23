@@ -12,6 +12,7 @@ import { Intake } from '@/pages/Intake'
 import { Login } from '@/pages/Login'
 import { ManagerConsole } from '@/pages/ManagerConsole'
 import { OfficerDesk } from '@/pages/OfficerDesk'
+import { Policy } from '@/pages/Policy'
 
 /**
  * URL → page, and which roles may open it. The manager sees both queues (PLAN.md Roles).
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
               { path: paths.manager, element: <ManagerConsole /> },
               { path: paths.cases, element: <Cases /> },
               { path: paths.audit, element: <AuditLog /> },
+              { path: paths.policy, element: <Policy /> },
             ],
           },
         ],
