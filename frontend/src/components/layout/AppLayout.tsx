@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
+import { ConnectionBanner } from './ConnectionBanner'
 import { Sidebar } from './Sidebar'
 import { PeopleProvider } from '@/context/PeopleProvider'
 
@@ -20,7 +21,8 @@ export function AppLayout() {
             toast.show({ tone: 'neutral', title: 'You have signed out' })
           }} />
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-card border border-default bg-card shadow-card">
-          <Outlet />
+          <ConnectionBanner />
+        <Outlet />
         </main>
       </div>
     </PeopleProvider>

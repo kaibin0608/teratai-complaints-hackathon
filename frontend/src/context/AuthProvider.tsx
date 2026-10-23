@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { authApi } from '@/api/auth'
 import { setAuthToken, setUnauthorizedHandler } from '@/api/client'
 import { AuthContext, type AuthContextValue, type AuthState } from './auth-context'
+import { useToast } from '@/hooks/useToast'
 
 /** Per tab, so officer / analyst / manager can be signed in side by side. */
 const TOKEN_KEY = 'teratai.auth.token'
@@ -43,11 +44,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user
   }, [])
 
-  // Any 401 from the backend ends the session.
+  // A 401 on a signed-in request ends the session, and says so on the login page.
+  const { show } = useToast()
   useEffect(() => {
-    setUnauthorizedHandler(logout)
+    setUnauthorizedHandler(() => {
+      logout()
+      show({ tone: 'warning', title: 'Your session has ended', description: 'Sign in again to carry on.' })
+    })
     return () => setUnauthorizedHandler(null)
-  }, [logout])
+  }, [logout, show])
 
   // Restore a saved session once on load.
   useEffect(() => {

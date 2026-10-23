@@ -3,7 +3,8 @@
  *
  * - Base URL: VITE_API_URL, or same origin (the Vite dev server proxies /api to the backend).
  * - Auth: the bearer token set by the auth context is attached to every request.
- * - Errors: non-2xx and network failures throw ApiError; a 401 also notifies the auth context.
+ * - Errors: non-2xx and network failures throw ApiError; a 401 on a signed-in request also notifies the auth context.
+ * - Connection: every request updates whether the backend answers (see subscribeConnection), so the UI can say so.
  */
 import type { ErrorBody, Money } from '@/lib/types'
 
@@ -19,6 +20,31 @@ export function setAuthToken(token: string | null): void {
 /** Called once by the auth context; fires when the backend rejects the token. */
 export function setUnauthorizedHandler(handler: (() => void) | null): void {
   onUnauthorized = handler
+}
+
+/** Whether the backend answered the last request, and when it last did (epoch ms). */
+export interface Connection {
+  reachable: boolean
+  lastOkAt: number | null
+}
+
+let connection: Connection = { reachable: true, lastOkAt: null }
+let lastOkAt: number | null = null
+const connectionListeners = new Set<() => void>()
+
+/** Listeners hear only changes of state, not every successful request. */
+function setReachable(reachable: boolean): void {
+  if (reachable) lastOkAt = Date.now()
+  if (reachable === connection.reachable) return
+  connection = { reachable, lastOkAt }
+  connectionListeners.forEach((notify) => notify())
+}
+
+export const getConnection = (): Connection => connection
+
+export function subscribeConnection(listener: () => void): () => void {
+  connectionListeners.add(listener)
+  return () => connectionListeners.delete(listener)
 }
 
 export class ApiError extends Error {
@@ -65,10 +91,16 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     })
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error
+    setReachable(false)
     throw new ApiError(0, 'Cannot reach the server. Check that the backend is running.')
   }
 
-  if (response.status === 401) onUnauthorized?.()
+  // A gateway error, or a bare 500 from the dev proxy (the backend's own errors are JSON), means the backend is down.
+  const json = response.headers.get('content-type')?.includes('application/json') ?? false
+  setReachable(!(response.status >= 502 || (response.status === 500 && !json)))
+
+  // Only a request that carried a token can mean "your session ended"; a wrong password at sign-in is just a 401.
+  if (response.status === 401 && headers.Authorization) onUnauthorized?.()
   if (!response.ok) throw await toApiError(response)
   if (response.status === 204) return undefined as T
   return (await response.json()) as T

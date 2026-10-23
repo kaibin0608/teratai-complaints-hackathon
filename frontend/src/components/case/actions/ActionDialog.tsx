@@ -88,7 +88,17 @@ function ActionForm({ action, detail, onClose, onChanged }: ActionFormProps) {
       else onClose()
     } catch (error) {
       const failure = error instanceof Error ? error : new Error(String(error))
-      if (failure instanceof ApiError && failure.status === 409) onChanged() // the case moved on: show its new state
+      if (failure instanceof ApiError && failure.status === 409) {
+        // The case moved on (someone else acted, or it changed queue): show its new state instead of a dead dialog.
+        onChanged()
+        onClose()
+        toast.show({
+          tone: 'warning',
+          title: `${detail.case.complaint_id} changed before this went through`,
+          description: `${failure.message} The page now shows its current state.`,
+        })
+        return
+      }
       setState({ status: 'error', error: failure })
     }
   }
